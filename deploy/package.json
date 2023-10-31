@@ -1,0 +1,19 @@
+{
+    "name": "udap-server-okta-deploy",
+    "version": "1.0.0",
+    "description": "Scripts intended to ease the process of deploying UDAP with Okta and auth0",
+    "main": "deploy.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@okta/okta-sdk-nodejs": "^7.0.1",
+        "auth0": "^3.5.0",
+        "node-jose": "^2.2.0",
+        "pem-jwk": "^2.0.0",
+        "readline": "^1.3.0",
+        "yaml": "^2.3.1"
+    }
+}

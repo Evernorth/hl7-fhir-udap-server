@@ -1,0 +1,9 @@
+node_modules/
+*.crt
+*.p12
+*.pfx
+*.pem
+.serverless/
+serverless.yml
+deploy/work/*.yml
+deploy/work/state
