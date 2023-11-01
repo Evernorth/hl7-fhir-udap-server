@@ -12,6 +12,11 @@ The server side components of the following features of the IG are supported:
 - [B2C Authorization](https://hl7.org/fhir/us/udap-security/consumer.html)
 - [Tiered OAuth](https://hl7.org/fhir/us/udap-security/user.html) serving both as data holder and/or as CSP/IDP
 
+Links to the other repositories in the collection:
+- [hl7-fhir-udap-common](https://github.com/Evernorth/hl7-fhir-udap-common#readme)
+- [hl7-fhir-udap-client](https://github.com/Evernorth/hl7-fhir-udap-client#readme)
+- [hl7-fhir-udap-test-client-ui](https://github.com/Evernorth/hl7-fhir-udap-test-client-ui#readme)
+
 # Deployment Architecture
 ![Deployment Architecture](./doc/DetailedArch.png)
 
