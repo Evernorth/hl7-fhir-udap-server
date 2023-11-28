@@ -4,13 +4,13 @@
 
 This repository is intended to transform an industry standard OAuth2 authorization server (Okta and auth0 references are included) into a UDAP capable authorization server. It is part of a four-repository collection for a full [UDAP](https://www.udap.org/) implementation including a UDAP client, a UDAP server, and all other supporting middleware and libraries. 
 
-This implementation adheres to published Version 1.0 of the [HL7 UDAP Security Implementation Guide](https://hl7.org/fhir/us/udap-security).   
+This implementation adheres to published Version 1.0 of the [HL7 UDAP Security Implementation Guide](http://hl7.org/fhir/us/udap-security/STU1/).   
 
 The server side components of the following features of the IG are supported:
-- [UDAP dynamic client registration](https://hl7.org/fhir/us/udap-security/registration.html)
-- [B2B Authorization](https://hl7.org/fhir/us/udap-security/b2b.html)
-- [B2C Authorization](https://hl7.org/fhir/us/udap-security/consumer.html)
-- [Tiered OAuth](https://hl7.org/fhir/us/udap-security/user.html) serving both as data holder and/or as CSP/IDP
+- [UDAP dynamic client registration](http://hl7.org/fhir/us/udap-security/STU1//registration.html)
+- [B2B Authorization](http://hl7.org/fhir/us/udap-security/STU1//b2b.html)
+- [B2C Authorization](http://hl7.org/fhir/us/udap-security/STU1//consumer.html)
+- [Tiered OAuth](http://hl7.org/fhir/us/udap-security/STU1//user.html) serving both as data holder and/or as CSP/IDP
 
 Links to the other repositories in the collection:
 - [hl7-fhir-udap-common](https://github.com/Evernorth/hl7-fhir-udap-common#readme)
