@@ -74,7 +74,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
             }
         }
         catch(error) {
-            console.log(error)
+            console.error(error)
             if(error.code && error.message) { //TODO: If it's one of our validation errors, let's return a 400.  Maybe we make this an actual validationerror type?
                 const returnBody = {
                     'error' : error.code,

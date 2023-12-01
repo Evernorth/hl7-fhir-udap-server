@@ -23,7 +23,7 @@ module.exports.tieredTokenClientHandler = async (event, context) => {
 		}
 	}
 	catch(error) { //The only time this should catch is if getIdpData fails.  All internal methods should be catching and returning real codes and messages.
-		console.log(error)
+		console.error(error)
 		return {
 			statusCode: 500,
 			headers: {"Cache-Control": "no-store", "Pragma": "no-cache"},

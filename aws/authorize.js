@@ -33,7 +33,7 @@ module.exports.authorizeHandler = async (event, context) => {
 		}
 	}
 	catch(error) {
-		console.log(error)
+		console.error(error)
 		return {
 			statusCode: 500,
 			body: 'Unable to store the new IDP mapping in our IDP database.'
