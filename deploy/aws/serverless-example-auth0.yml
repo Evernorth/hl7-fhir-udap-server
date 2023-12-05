@@ -1,6 +1,6 @@
-#This is the config file for the Okta reference implementation of UDAP.
+#This is the config file for the Auth0 reference implementation of UDAP.
 
-service: udap-server-okta
+service: udap-server-auth0
 
 plugins:
   - serverless-certificate-creator
@@ -32,14 +32,14 @@ params:
     TIERED_OAUTH_REDIRECT_PATH: /login/callback
 
     #The hostname used for vanity URLs on the backend authz server.
-    OKTA_CUSTOM_DOMAIN_NAME_BACKEND: youroktatenantsubdomain.customdomains.oktapreview.com
-    OKTA_CUSTOM_DOMAIN_NAME_APIKEY: forauth0only
+    OAUTH_CUSTOM_DOMAIN_NAME_BACKEND: yourauth0tenantsubdomain.customdomains.auth0preview.com
+    OAUTH_CUSTOM_DOMAIN_NAME_APIKEY: forauth0only
 
-    #Okta Org settings for calling the management endpoint.
-    OKTA_ORG: youroktatenantsubdomain.oktapreview.com
-    OKTA_CLIENT_ID: client_id_for_okta_m2m_app_for_management_api
-    OKTA_PRIVATE_KEY_FILE: ./private_key_jwks_file_from_app_in_okta
-    OKTA_CLIENT_TOKEN_ENDPOINT: https://${param:OKTA_ORG}/oauth/token
+    #OAuth Org settings for calling the management endpoint.
+    OAUTH_ORG: yourauth0tenantsubdomain.auth0preview.com
+    OAUTH_CLIENT_ID: client_id_for_auth0_m2m_app_for_management_api
+    OAUTH_PRIVATE_KEY_FILE: ./private_key_jwks_file_from_app_in_auht0
+    OAUTH_CLIENT_TOKEN_ENDPOINT: https://${param:OAUTH_ORG}/oauth/token
 
     #Certificate to use to determine the trust community.
     COMMUNITY_CERT: ./EMRDirectTestCA.crt
@@ -59,7 +59,7 @@ params:
     API_GATEWAY_DOMAIN_NAME_BACKEND: api_gateway_custom_domain_backend_url
 
     #This should be 'okta' or 'auth0'
-    OKTA_PLATFORM: auth0
+    OAUTH_PLATFORM: auth0
 
 ##YOU SHOULD NOT NEED TO TOUCH ANYTHING BELOW THIS LINE
 provider:
@@ -83,14 +83,14 @@ provider:
     REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}/register
     TIERED_OAUTH_REDIRECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:TIERED_OAUTH_REDIRECT_PATH}
 
-    OKTA_ORG_VANITY_URL_TOKEN_ENDPOINT: https://${param:OKTA_CUSTOM_DOMAIN_NAME_BACKEND}${param:TOKEN_PATH}
-    OKTA_ORG_VANITY_URL_AUTHORIZE_ENDPOINT: https://${param:OKTA_CUSTOM_DOMAIN_NAME_BACKEND}${param:AUTHORIZE_PATH}
-    OKTA_ORG_VANITY_URL_APIKEY: ${param:OKTA_CUSTOM_DOMAIN_NAME_APIKEY}
+    OAUTH_ORG_VANITY_URL_TOKEN_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:TOKEN_PATH}
+    OAUTH_ORG_VANITY_URL_AUTHORIZE_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:AUTHORIZE_PATH}
+    OAUTH_ORG_VANITY_URL_APIKEY: ${param:OAUTH_CUSTOM_DOMAIN_NAME_APIKEY}
 
-    OKTA_ORG: ${param:OKTA_ORG}
-    OKTA_CLIENT_ID: ${param:OKTA_CLIENT_ID}
-    OKTA_PRIVATE_KEY_FILE: ${param:OKTA_PRIVATE_KEY_FILE}
-    OKTA_CLIENT_TOKEN_ENDPOINT: ${param:OKTA_CLIENT_TOKEN_ENDPOINT}
+    OAUTH_ORG: ${param:OAUTH_ORG}
+    OAUTH_CLIENT_ID: ${param:OAUTH_CLIENT_ID}
+    OAUTH_PRIVATE_KEY_FILE: ${param:OAUTH_PRIVATE_KEY_FILE}
+    OAUTH_CLIENT_TOKEN_ENDPOINT: ${param:OAUTH_CLIENT_TOKEN_ENDPOINT}
 
     COMMUNITY_CERT: ${param:COMMUNITY_CERT}
     SERVER_KEY: ${param:SERVER_KEY}
@@ -104,7 +104,7 @@ provider:
     IDP_MAPPING_TABLE_NAME: ${param:BASE_DOMAIN}_${param:IDP_MAPPING_TABLE_NAME}
     SAN_REGISTRY_TABLE_NAME: ${param:BASE_DOMAIN}_${param:SAN_REGISTRY_TABLE_NAME}
 
-    OKTA_PLATFORM: ${param:OKTA_PLATFORM}
+    OAUTH_PLATFORM: ${param:OAUTH_PLATFORM}
 
 #Provide additional access to allow read/write to our refresh token cache
   iamRoleStatements:
@@ -221,12 +221,12 @@ resources:
               OriginReadTimeout: 30
               OriginSSLProtocols:
               - "TLSv1.2"
-            DomainName: ${param:OKTA_CUSTOM_DOMAIN_NAME_BACKEND}
-            Id: ${param:OKTA_CUSTOM_DOMAIN_NAME_BACKEND}
+            DomainName: ${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}
+            Id: ${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}
             OriginCustomHeaders:
             -
               HeaderName: "cname-api-key"
-              HeaderValue: ${param:OKTA_CUSTOM_DOMAIN_NAME_APIKEY}
+              HeaderValue: ${param:OAUTH_CUSTOM_DOMAIN_NAME_APIKEY}
             OriginPath: ""
           DefaultCacheBehavior:
             AllowedMethods:
@@ -256,7 +256,7 @@ resources:
             MaxTTL: 31536000
             MinTTL: 0
             SmoothStreaming: false
-            TargetOriginId: ${param:OKTA_CUSTOM_DOMAIN_NAME_BACKEND}
+            TargetOriginId: ${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}
             ViewerProtocolPolicy: "redirect-to-https"
           CacheBehaviors:
           -

@@ -1,8 +1,12 @@
 # hl7-fhir-udap-server
 
+## Getting Started
+
+For a general overview of UDAP as well as a getting starting guide of the full four-repository collection see [UDAP Documentation](https://github.com/Evernorth/hl7-fhir-udap-docs#readme)
+
 ## Overview
 
-This repository is intended to transform an industry standard OAuth2 authorization server (Okta and auth0 references are included) into a UDAP capable authorization server. It is part of a four-repository collection for a full [UDAP](https://www.udap.org/) implementation including a UDAP client, a UDAP server, and all other supporting middleware and libraries. 
+This repository is intended to transform by proxy, an industry standard OAuth2 authorization server (Okta and Auth0 references are included) into a UDAP capable authorization server. It is part of a four-repository collection for a full [UDAP](https://www.udap.org/) implementation including a UDAP client, a UDAP server, and all other supporting middleware and libraries. 
 
 This implementation adheres to published Version 1.0 of the [HL7 UDAP Security Implementation Guide](http://hl7.org/fhir/us/udap-security/STU1/).   
 
@@ -18,15 +22,15 @@ Links to the other repositories in the collection:
 - [hl7-fhir-udap-test-client-ui](https://github.com/Evernorth/hl7-fhir-udap-test-client-ui#readme)
 
 # Deployment Architecture
-![Deployment Architecture](./doc/DetailedArch.png)
+![Deployment Architecture](./images/DetailedArch.png)
 
 ## Endpoints
 This entire project is managed by the [serverless framework](https://www.serverless.com/), which is an easy way to manage numerous cloud resources as a single unit. The codebase was developed for and primarily tested with AWS technologies.
 
 This repository includes the following high-level endpoints:
-- **/authorize**: This endpoint supports the tiered oauth flow as the data holder. It is responsible for performing dynamic client registration with the upstream IDP/CSP prior to passing control to the backend authorization server (Okta/auth0).
+- **/authorize**: This endpoint supports the tiered oauth flow as the data holder. It is responsible for performing dynamic client registration with the upstream IDP/CSP prior to passing control to the backend authorization server (Okta/Auth0).
 
-- **/register**: This endpoint will accept an inbound, UDAP compliant software statement JWT from a client. The JWT will be validated according to the UDAP specification, and then the appropriate actions will be taken within the backend authorization service (Okta/auth0).
+- **/register**: This endpoint will accept an inbound, UDAP compliant software statement JWT from a client. The JWT will be validated according to the UDAP specification, and then the appropriate actions will be taken within the backend authorization service (Okta/Auth0).
 
 - **/token:** This endpoint is a minimal proxy on top of the backend authorization server's /token endpoint. It is responsible for performing PKI community validation on the inbound /token request in addition to the industry standard private_key_jwt authentication that authorization servers already handle.
 
@@ -41,7 +45,7 @@ To deploy this solution, you must have the following pre-requisites ready to go:
 - An OAuth2 authorization service to enhance:
     - Okta (a free tenant is available at [Okta's Developer Site](https://developer.okta.com/signup))
 
-    - auth0 (a free tenant is available at [auth0's Developer Site](https://auth0.com/signup))
+    - Auth0 (a free tenant is available at [Auth0's Developer Site](https://auth0.com/signup))
 - Node.js
 - [serverless framework](https://www.serverless.com/) installed on the machine you're deploying from.
 - An AWS tenant to deploy the solution to.
@@ -52,8 +56,8 @@ To deploy this solution, you must have the following pre-requisites ready to go:
 
 To assist with the deployment of the overall solution, a guided deployment process has been provided. The automated process performs the following high-level tasks:
 * Uses a questionnaire to collect pre-requisite information from you.
-* Generates configuration files for automatically deploying Okta/auth0 resources as well as AWS resources.
-* Automatically deploys Okta/auth0 configuration.
+* Generates configuration files for automatically deploying Okta/Auth0 resources as well as AWS resources.
+* Automatically deploys Okta/Auth0 configuration.
 * Automatically deploys AWS configuration.
 * Assists with any manual steps that are necessary, such as any DNS updates that need to be made.
 
@@ -92,7 +96,7 @@ If you have questions, concerns, bug reports, etc., file an issue in this reposi
 
 ## Getting Involved
 
-See the [CONTRIBUTING.md](CONTRIBUTING.md) file for info on how to get involved.
+See the [CONTRIBUTING](CONTRIBUTING.md) file for info on how to get involved.
 
 ## License
 

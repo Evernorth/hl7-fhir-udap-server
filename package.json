@@ -1,7 +1,7 @@
 {
   "name": "hl7-fhir-udap-server",
   "version": "1.0.0",
-  "description": "A reference UDAP-capable authorization server built with a pluggabel",
+  "description": "A reference UDAP-capable authorization server built with the ability to plug in different OAuth servers.  Okta and Auth0 included.",
   "main": "",
   "directories": {
     "lib": "lib"

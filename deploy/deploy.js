@@ -1,4 +1,4 @@
-//This script is intended to be a guided process for deploying all of the required configurations and infrastructue for supporting SMART/FHIR with Okta.
+//This script is intended to be a guided process for deploying all of the required configurations and infrastructue for supporting SMART/FHIR with OAuth.
 const readline = require('readline');
 const fs = require('fs');
 
@@ -44,7 +44,7 @@ async function main() {
     }
 
 
-    //Load all of our resources for the selected cloud platform and selected Okta platform.
+    //Load all of our resources for the selected cloud platform and selected OAuth platform.
     const chosenCloudPlatform = state.cloudPlatform ? state.cloudPlatform : await utils.askSpecific(rl, 'Which cloud platform would you like to deploy to?', SUPPORTED_CLOUD_PLATFORMS)
  
     //Platform specific deploy helpers.
@@ -52,19 +52,19 @@ async function main() {
     const states = require(`./${chosenCloudPlatform}/deploy_states`).states
     const platformDeployHandlers = require(`./${chosenCloudPlatform}/deploy_handlers`).handlers
 
-    const chosenOktaPlatform = state.oktaPlatform ? state.oktaPlatform : await utils.askSpecific(rl, 'Which Okta platform would you like to deploy to?', ['okta','auth0'])
+    const chosenOAuthPlatform = state.oauthPlatform ? state.oauthPlatform : await utils.askSpecific(rl, 'Which OAuth platform would you like to deploy to?', ['okta','auth0'])
 
-    const oktaDeployHandlers = require(`./${chosenOktaPlatform}/deploy_handlers`).handlers
+    const oauthDeployHandlers = require(`./${chosenOAuthPlatform}/deploy_handlers`).handlers
 
     const handlers = {
-        ...oktaDeployHandlers,
+        ...oauthDeployHandlers,
         ...platformDeployHandlers
     }
 
-    const deploymentName = state.deploymentName ? state.deploymentName : await utils.askPattern(rl, 'What would you like to name your deployment? This name is appended to all objects in your chosen Okta platform, and is also appended to all objects in AWS for easy association (Example: SMARTv1)', /.+/)
+    const deploymentName = state.deploymentName ? state.deploymentName : await utils.askPattern(rl, 'What would you like to name your deployment? This name is appended to all objects in your chosen OAuth platform, and is also appended to all objects in AWS for easy association (Example: SMARTv1)', /.+/)
 
     if(newDeployment) {
-        state = initState(additionalStates, chosenCloudPlatform, chosenOktaPlatform, deploymentName)
+        state = initState(additionalStates, chosenCloudPlatform, chosenOAuthPlatform, deploymentName)
     }
 
     console.log('Starting deployment tasks...')
@@ -89,24 +89,24 @@ async function main() {
     return
 }
 
-function initState(additionalStates, chosenCloudPlatform, chosenOktaPlatform, deploymentName) {
+function initState(additionalStates, chosenCloudPlatform, chosenOAuthPlatform, deploymentName) {
     return {
         cloudPlatform: chosenCloudPlatform,
-        oktaPlatform: chosenOktaPlatform,
+        oauthPlatform: chosenOAuthPlatform,
         currentStep: STATE_GENERATE_DEPLOY_CREDENTIALS,
         deploymentName: deploymentName,
         smartVersionScopes: '',
         baseDomain: '',
         fhirBaseUrl: '',
-        oktaDomain: '',
-        oktaCustomDomainId: '',
+        oauthDomain: '',
+        oauthCustomDomainId: '',
         auth0CustomDomainApiKey: '',
-        oktaCustomDomainBackendDomain: '',
-        oktaDeployMgmtClientId: '',
-        oktaDeployMgmtPrivateKeyFile: '',
-        oktaApiClientId: '',
-        oktaApiClientPrivateKeyFile: '',
-        oktaResourceServerId: '',
+        oauthCustomDomainBackendDomain: '',
+        oauthDeployMgmtClientId: '',
+        oauthDeployMgmtPrivateKeyFile: '',
+        oauthApiClientId: '',
+        oauthApiClientPrivateKeyFile: '',
+        oauthResourceServerId: '',
         udapCommunityCertFile: '',
         udapMemberP12File: '',
         udapMemberP12Pwd: '',

@@ -13,8 +13,8 @@ module.exports.handlers = {
         state.baseDomain = await utils.askPattern(rl, 'What will the base domain of your authorization service be? (Example: smartauthz.your.tld)', /.+/)
         state.fhirBaseUrl = await utils.askPattern(rl, 'What is the base URL of the FHIR server you are securing? (Example: https://fhir.your.tld/r4)', /.+/)
       
-        state.oktaDomain = await utils.askPattern(rl, 'What Okta tenant will you use to secure this FHIR server? (Example: yourtenant.region.auth0.com)', /.+/)
-        state.oktaDeployMgmtClientId = await utils.askPattern(rl, 'Please enter the client id of the machine to machine application in your tenant for use by the deploy script to create required objects. You created this at the beginning of this process.', /.+/)
+        state.oauthDomain = await utils.askPattern(rl, 'What OAuth tenant will you use to secure this FHIR server? (Example: yourtenant.region.auth0.com)', /.+/)
+        state.oauthDeployMgmtClientId = await utils.askPattern(rl, 'Please enter the client id of the machine to machine application in your tenant for use by the deploy script to create required objects. You created this at the beginning of this process.', /.+/)
         
         state.udapCommunityCertFile = await utils.askPattern(rl, 'Please enter the file path of your UDAP community trust anchor here. This will be a CA certificate in PEM format', /.+/)
         state.udapMemberP12File = await utils.askPattern(rl, 'Please enter the file path of your server\'s community private key/certificate file. This file will identify your server as being part of a community, and must be in PKCS12 format', /.+/)
@@ -29,7 +29,7 @@ module.exports.handlers = {
 
     handle_generate_serverless_config: async (rl, state) => {
         const serverlessConfigFile= `./work/serverless.${state.deploymentName}.yml`
-        const exampleServerlessConfigFile = SERVERLESS_AWS_EXAMPLE_CONFIG.replace('{platform}',state.oktaPlatform)
+        const exampleServerlessConfigFile = SERVERLESS_AWS_EXAMPLE_CONFIG.replace('{platform}',state.oauthPlatform)
 
         console.log(`Reading example serverless config at: ${exampleServerlessConfigFile}`)
         var serverlessConfig = YAML.parse(fs.readFileSync(exampleServerlessConfigFile, 'utf-8'));
@@ -41,13 +41,13 @@ module.exports.handlers = {
         serverlessConfig.params.default.BASE_TLD = `${domainParts[domainParts.length - 2]}.${domainParts[domainParts.length - 1]}.`
         serverlessConfig.params.default.FHIR_BASE_URL = state.fhirBaseUrl
     
-        serverlessConfig.params.default.OKTA_ORG = state.oktaDomain
-        serverlessConfig.params.default.OKTA_CUSTOM_DOMAIN_NAME_BACKEND = state.oktaCustomDomainBackendDomain
-        serverlessConfig.params.default.OKTA_CUSTOM_DOMAIN_NAME_APIKEY = state.auth0CustomDomainApiKey
+        serverlessConfig.params.default.OAUTH_ORG = state.oauthDomain
+        serverlessConfig.params.default.OAUTH_CUSTOM_DOMAIN_NAME_BACKEND = state.oauthCustomDomainBackendDomain
+        serverlessConfig.params.default.OAUTH_CUSTOM_DOMAIN_NAME_APIKEY = state.auth0CustomDomainApiKey
         serverlessConfig.params.default.API_GATEWAY_DOMAIN_NAME_BACKEND = state.apiGatewayBackendDomain
 
-        serverlessConfig.params.default.OKTA_CLIENT_ID = state.oktaApiClientId
-        serverlessConfig.params.default.OKTA_PRIVATE_KEY_FILE = `udap_pki/${state.oktaApiClientPrivateKeyFile}`
+        serverlessConfig.params.default.OAUTH_CLIENT_ID = state.oauthApiClientId
+        serverlessConfig.params.default.OAUTH_PRIVATE_KEY_FILE = `udap_pki/${state.oauthApiClientPrivateKeyFile}`
 
         serverlessConfig.params.default.COMMUNITY_CERT = state.udapCommunityCertFile
         serverlessConfig.params.default.SERVER_KEY = state.udapMemberP12File
@@ -57,7 +57,7 @@ module.exports.handlers = {
 
         serverlessConfig.params.default.PURPOSE_OF_USE = state.udapPurposeOfUse
 
-        serverlessConfig.params.default.OKTA_RESOURCE_SERVER_ID = state.oktaResourceServerId
+        serverlessConfig.params.default.OAUTH_RESOURCE_SERVER_ID = state.oauthResourceServerId
 
         console.log(`Writing new config file at: ${serverlessConfigFile}`)
         fs.writeFileSync(serverlessConfigFile, YAML.stringify(serverlessConfig), 'utf-8');
@@ -163,9 +163,9 @@ module.exports.handlers = {
         console.log(`Copying ./work/serverless.${state.deploymentName}.yml to ../serverless.${state.deploymentName}.yml`)
         execSync(`cp ./work/serverless.${state.deploymentName}.yml ../serverless.${state.deploymentName}.yml`, {cwd: './', stdio: 'inherit'})
 
-        console.log('Copying Okta API private key to the udap_pki folder...')
-        console.log(`Copying ./work/${state.oktaApiClientPrivateKeyFile} to ../udap_pki/${state.oktaApiClientPrivateKeyFile}`)
-        execSync(`cp ./work/${state.oktaApiClientPrivateKeyFile} ../udap_pki/${state.oktaApiClientPrivateKeyFile}`, {cwd: './', stdio: 'inherit'})
+        console.log('Copying OAuth API private key to the udap_pki folder...')
+        console.log(`Copying ./work/${state.oauthApiClientPrivateKeyFile} to ../udap_pki/${state.oauthApiClientPrivateKeyFile}`)
+        execSync(`cp ./work/${state.oauthApiClientPrivateKeyFile} ../udap_pki/${state.oauthApiClientPrivateKeyFile}`, {cwd: './', stdio: 'inherit'})
 
         await utils.askSpecific(rl, 'Press "y" when you are ready to finish AWS deployment (this will take 10-15 minutes), or ctrl+c to exit and revisit later.', ['y'])
         execSync(`serverless deploy --verbose -c serverless.${state.deploymentName}.yml`, {cwd: '../', stdio: 'inherit'})

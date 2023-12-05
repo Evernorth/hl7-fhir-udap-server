@@ -6,19 +6,19 @@ AWS.config.update({
 })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
 
-//UDAP Trusted Dynamic Client Registration Proxy for OKTA application registration
+//UDAP Trusted Dynamic Client Registration Proxy for OAuth application registration
 module.exports.clientRegistrationHandler = async (event, context) => {
     var returnStatus = '400';
     var clientId = null
-    var oktaPlatform = null
+    var oauthPlatform = null
     
-	if(process.env.OKTA_PLATFORM == 'okta') {
-		oktaPlatform = require('../lib/okta/udap_okta')
+	if(process.env.OAUTH_PLATFORM == 'okta') {
+		oauthPlatform = require('../lib/okta/udap_okta')
 	}
 	else {
-		oktaPlatform = require('../lib/auth0/udap_auth0')
+		oauthPlatform = require('../lib/auth0/udap_auth0')
 	}
-    const oktaPlatformManagementClient = oktaPlatform.getAPIClient(process.env.OKTA_ORG, process.env.OKTA_CLIENT_ID, process.env.OKTA_PRIVATE_KEY_FILE) 
+    const oauthPlatformManagementClient = oauthPlatform.getAPIClient(process.env.OAUTH_ORG, process.env.OAUTH_CLIENT_ID, process.env.OAUTH_PRIVATE_KEY_FILE) 
 
     var validatedRegistrationData = await tdcr_udapLib.validateUdapCommonRegistrationRequest(event.body)
 
@@ -31,9 +31,8 @@ module.exports.clientRegistrationHandler = async (event, context) => {
                 //new registration
 
                 await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, false)
-                clientId = await oktaPlatform.createClientApp(validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oktaPlatformManagementClient)
+                clientId = await oauthPlatform.createClientApp(validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
                 //TODO:  Scope handling needs to happen somewhere in here.
-
                 await updateSanRegistry(validatedRegistrationData.subjectAlternativeName, clientId)
                 returnStatus = '201'
             }
@@ -44,13 +43,13 @@ module.exports.clientRegistrationHandler = async (event, context) => {
                 
                 clientId = result.client_application_id
                 //TODO:  Scope handling needs to happen somewhere in here.
-                await oktaPlatform.updateClientApp(result.client_application_id, validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oktaPlatformManagementClient)
+                await oauthPlatform.updateClientApp(result.client_application_id, validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
                 returnStatus = '200'
             }
             else {
                 //No grant types given - delete registration.
                 clientId = result.client_application_id
-                await oktaPlatform.deleteClientApp(result.client_application_id, oktaPlatformManagementClient)
+                await oauthPlatform.deleteClientApp(result.client_application_id, oauthPlatformManagementClient)
                 await deleteSanRegistry(validatedRegistrationData.subjectAlternativeName)
 
                 returnStatus = '204'
@@ -75,7 +74,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
         }
         catch(error) {
             console.error(error)
-            if(error.code && error.message) { //TODO: If it's one of our validation errors, let's return a 400.  Maybe we make this an actual validationerror type?
+            if(error.code && error.message) {
                 const returnBody = {
                     'error' : error.code,
                     'error_description': error.message

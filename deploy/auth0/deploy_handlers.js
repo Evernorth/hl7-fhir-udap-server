@@ -7,13 +7,13 @@ const jose = require('node-jose');
 module.exports.handlers = {
     handle_generate_deployment_credentials: async (rl, state) => {
         const deployKey = await getPublicPrivateJwks()
-        const oktaDeploymentAPIPrivateKeyFile = 'oktaDeploymentApiPrivateKey-' + state.deploymentName + '.pem'
+        const auth0DeploymentAPIPrivateKeyFile = 'auth0DeploymentApiPrivateKey-' + state.deploymentName + '.pem'
 
-        fs.writeFileSync('../work/' + oktaDeploymentAPIPrivateKeyFile, jwk2pem(deployKey.privateKey), 'utf-8');
-        console.log('Okta Deployment API Key Generated!')
-        console.log(`Your Okta API private key, used for deployment purposes only, is located at: ${oktaDeploymentAPIPrivateKeyFile}`)
+        fs.writeFileSync('../work/' + auth0DeploymentAPIPrivateKeyFile, jwk2pem(deployKey.privateKey), 'utf-8');
+        console.log('Auth0 Deployment API Key Generated!')
+        console.log(`Your Auth0 API private key, used for deployment purposes only, is located at: ${auth0DeploymentAPIPrivateKeyFile}`)
         console.log('--------------------------------------------------------------------------')
-        console.log('Please login to your Okta admin console, and create an API service application with the following configuration:')
+        console.log('Please login to your Auth0 admin console, and create an API service application with the following configuration:')
         console.log('Scopes: read:clients create:clients read:resource_servers create:resource_servers, create:custom_domains')
         console.log('--------------------------------------------------------------------------')
         console.log('Use the following public key for JWT authentication:')
@@ -21,44 +21,44 @@ module.exports.handlers = {
         console.log('--------------------------------------------------------------------------')
         console.log('When finished, keep note of the client_id of the application- you will need to enter it shortly.')
         
-        state.oktaDeployMgmtPrivateKeyFile = '../work/' + oktaDeploymentAPIPrivateKeyFile
+        state.auth0DeployMgmtPrivateKeyFile = '../work/' + auth0DeploymentAPIPrivateKeyFile
 
     },
 
-    handle_deploy_okta: async (rl, state) => {
+    handle_deploy_auth0: async (rl, state) => {
         var auth0 = new ManagementClient({
             domain: state.auth0Domain,
             clientId: state.auth0DeployMgmtClientId,
             clientSecret: state.auth0DeployMgmtClientSecret,
             scope: 'read:clients create:clients read:resource_servers create:resource_servers'
         });
-        const oktaAPIPrivateKeyFile = 'oktaApiPrivateKey-' + state.deploymentName + '.pem'
+        const auth0APIPrivateKeyFile = 'auth0ApiPrivateKey-' + state.deploymentName + '.pem'
 
         //Deploy our resource server and applications
         const resourceServerId = await createApi(state, auth0)
         const appDetails = await createApps(state, auth0)
 
         //Output of detail to go into the platform deployment process.
-        console.log('auth0 objects created!')
+        console.log('Auth0 objects created!')
         console.log('If you are following the manual, unguided process- please configure the following in your serverless.yml:')
         console.log('--------------------------------------------------------------------------')
         console.log(`Resource Server ID (FHIR_RESOURCE_SERVER_ID): ${resourceServerId}`)
         console.log('--------------------------------------------------------------------------')
         console.log('UDAP M2M App Details:')
         console.log(`UDAP M2M App Client ID (AUTH0_API_CLIENTID): ${appDetails.apiM2MClientId}`)
-        console.log(`UDAP M2M App Client Private Key File (AUTH0_API_CLIENTSECRET): ${oktaAPIPrivateKeyFile}`)
+        console.log(`UDAP M2M App Client Private Key File (AUTH0_API_CLIENTSECRET): ${auth0APIPrivateKeyFile}`)
         console.log('--------------------------------------------------------------------------')
 
         if(appDetails.apiM2MClientPrivateKey) {
             //To be consistent, I'm storing the private key as PEM.
-            fs.writeFileSync('../work/' + oktaAPIPrivateKeyFile, jwk2pem(appDetails.apiM2MClientPrivateKey), 'utf-8');
+            fs.writeFileSync('../work/' + auth0APIPrivateKeyFile, jwk2pem(appDetails.apiM2MClientPrivateKey), 'utf-8');
         }
-        state.oktaApiClientPrivateKeyFile = oktaAPIPrivateKeyFile
-        state.oktaApiClientId = appDetails.apiM2MClientId ? appDetails.apiM2MClientId : state.auth0ApiClientId
+        state.auth0ApiClientPrivateKeyFile = auth0APIPrivateKeyFile
+        state.auth0ApiClientId = appDetails.apiM2MClientId ? appDetails.apiM2MClientId : state.auth0ApiClientId
         state.fhirResourceServerId = resourceServerId ? resourceServerId : state.fhirResourceServerId
     },
     
-    handle_okta_create_custom_domain: async (rl, state) => {
+    handle_auth0_create_custom_domain: async (rl, state) => {
         console.log('Creating custom domain in auth0...')
         var auth0 = new ManagementClient({
             domain: state.auth0Domain,
@@ -69,7 +69,7 @@ module.exports.handlers = {
         const domainModel = models.customDomain
         domainModel.domain = state.baseDomain
         const addDomainOutput = await auth0.createCustomDomain(domainModel)
-        console.log(`Domain created in auth0 - domain id: ${addDomainOutput.custom_domain_id}`)
+        console.log(`Domain created in Auth0 - domain id: ${addDomainOutput.custom_domain_id}`)
 
         console.log('In order to verify the domain in the next step, please configure the following DNS record.')
         console.log('--------------------------------------------------------------------------')
@@ -81,8 +81,8 @@ module.exports.handlers = {
         state.auth0CustomDomainId = addDomainOutput.custom_domain_id
     },
 
-    handle_okta_verify_custom_domain: async (rl, state) => {
-        console.log('Verifying custom domain in auth0...')
+    handle_auth0_verify_custom_domain: async (rl, state) => {
+        console.log('Verifying custom domain in Auth0...')
         var auth0 = new ManagementClient({
             domain: state.auth0Domain,
             clientId: state.auth0DeployMgmtClientId,
@@ -194,7 +194,7 @@ async function createApps(state, auth0) {
 
     //If we created the app, go ahead and grant it access to the auth0 management API.
     if(apiM2MDetails.created) {
-        console.log('API Access Client Created. Granting Okta management API scopes.')
+        console.log('API Access Client Created. Granting auth0 management API scopes.')
         var apiM2MClientGrant = models.apiM2MClientGrant
         apiM2MClientGrant.client_id = apiM2MDetails.id
         apiM2MClientGrant.audience = `https://${state.auth0Domain}/api/v2/`
@@ -267,7 +267,7 @@ async function createApp(auth0, appModel) {
 }
 
 async function getPublicPrivateJwks() {
-    console.log('Generating a new private key for the patient picker to use for Okta API management calls')
+    console.log('Generating a new private key for the patient picker to use for auth0 API management calls')
     const keyStore = jose.JWK.createKeyStore()
     const newKeyStore = await keyStore.generate('RSA', 4096, {alg: 'RS256', use: 'sig' })
     const newKey = newKeyStore.toJSON(true)
