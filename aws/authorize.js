@@ -17,7 +17,7 @@ module.exports.authorizeHandler = async (event, context) => {
 	const outputHeaders = createHeaders(authorizeResult.headers)
 
 	//If we registered a new IDP, we need to store a mapping between the
-	//Okta public key and the intended /token endpoint, and the community private key.
+	//OAuth public key and the intended /token endpoint, and the community private key.
 	//We're doing this here to abstract out the data storage from the business logic.
 	console.log("Authorize Result:")
 	console.log(authorizeResult)
@@ -41,10 +41,10 @@ module.exports.authorizeHandler = async (event, context) => {
 	}
 }
 
-//Stores the Okta key<->Community key in a dynamoDB for future retrieval
+//Stores the OAuth key<->Community key in a dynamoDB for future retrieval
 //During tiered oauth.
 async function storeIdpMapping(mapping) {
-	console.log('New IDP Registered- storing Okta Public key in the database.')
+	console.log('New IDP Registered- storing OAuth Public key in the database.')
 	console.log('Item to put in the DB:')
 	console.log(mapping)
 	const result = await dynamoDB.put({
