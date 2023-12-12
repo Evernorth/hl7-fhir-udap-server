@@ -104,6 +104,6 @@ The hl7-fhir-udap-server is Open Source Software released under the [Apache 2.0 
 
 ## Original Contributors
 
-The hl7-fhir-udap-server was originally developed as a collaborative effort between [Evernorth](https://www.evernorth.com/) and [Okta](https://www.okta.com/). We would like to recognize the following people for their initial contributions to the project: 
+We would like to recognize the following people for their initial contributions to the project: 
  - Tom Loomis, Evernorth
  - Dan Cinnamon, Okta
