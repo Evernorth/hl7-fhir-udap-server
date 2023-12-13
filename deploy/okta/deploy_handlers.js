@@ -5,7 +5,22 @@ const jwk2pem = require('pem-jwk').jwk2pem
 const fs = require('fs');
 const utils = require('../deploy_utils')
 
+module.exports.specificStateVariables = {
+    oktaDeployMgmtPrivateKeyFile: ''
+}
+
 module.exports.handlers = {
+
+    handle_deploy_oauth_questionnaire: async (rl, state) => {
+        console.log('Collecting OAuth2 authorization server configuration information...')
+      
+        state.oauthServiceBaseDomain = await utils.askPattern(rl, 'What Okta tenant will you use to secure this FHIR server? (Example: yourtenant.oktapreview.com)', /.+/)
+        state.oauthDeployMgmtClientId = await utils.askPattern(rl, 'Please enter the client id of the machine to machine application in your tenant for use by the deploy script to create required objects. You created this at the beginning of this process.', /.+/)
+        
+        console.log('All set! Current configuration:')
+        console.log(state)
+    },
+
     handle_generate_deployment_credentials: async (rl, state) => {
         const deployKey = await getPublicPrivateJwks()
         const oktaDeploymentAPIPrivateKeyFile = 'oktaDeploymentApiPrivateKey-' + state.deploymentName + '.pem'
@@ -26,7 +41,7 @@ module.exports.handlers = {
         state.oktaDeployMgmtPrivateKeyFile = './work/' + oktaDeploymentAPIPrivateKeyFile
 
     },
-    handle_deploy_okta: async (rl, state) => {
+    handle_deploy_oauth: async (rl, state) => {
         const client = getClient(state)
         const oktaAPIPrivateKeyFile = 'oktaApiPrivateKey-' + state.deploymentName + '.pem'
 
@@ -40,21 +55,21 @@ module.exports.handlers = {
         console.log(`Resource Server ID (FHIR_RESOURCE_SERVER_ID in serverless.yml): ${resourceServerId}`)
         console.log('--------------------------------------------------------------------------')
         console.log('UDAP M2M App Details:')
-        console.log(`UDAP M2M App Client ID (OKTA_CLIENT_ID in serverless.yml): ${appDetails.apiM2MClientId}`)
-        console.log(`UDAP M2M App Client Private Key File (OKTA_PRIVATE_KEY_FILE in serverless.yml): ${oktaAPIPrivateKeyFile}`)
+        console.log(`UDAP M2M App Client ID (OAUTH_CLIENT_ID in serverless.yml): ${appDetails.apiM2MClientId}`)
+        console.log(`UDAP M2M App Client Private Key File (OAUTH_PRIVATE_KEY_FILE in serverless.yml): ${oktaAPIPrivateKeyFile}`)
         console.log('--------------------------------------------------------------------------')
 
-        state.oktaApiClientId = appDetails.apiM2MClientId ? appDetails.apiM2MClientId : state.auth0ApiClientId
-        state.oktaResourceServerId = resourceServerId ? resourceServerId : state.oktaResourceServerId
+        state.oauthRuntimeAPIClientId = appDetails.apiM2MClientId ? appDetails.apiM2MClientId : state.auth0ApiClientId
+        state.fhirResourceServerId = resourceServerId ? resourceServerId : state.oktaResourceServerId
 
         if(appDetails.apiM2MClientPrivateKey) {
             //To be consistent, I'm storing the private key as PEM.
             fs.writeFileSync('./work/' + oktaAPIPrivateKeyFile, jwk2pem(appDetails.apiM2MClientPrivateKey), 'utf-8');
         }
-        state.oktaApiClientPrivateKeyFile = oktaAPIPrivateKeyFile
+        state.oauthRuntimeAPIPrivateKeyFile = oktaAPIPrivateKeyFile
     },
     
-    handle_okta_create_custom_domain: async (rl, state) => {
+    handle_oauth_create_custom_domain: async (rl, state) => {
         console.log('Creating custom domain in Okta...')
 
         const client = getClient(state)
@@ -69,23 +84,23 @@ module.exports.handlers = {
             for(const record of domain.dnsRecords) {
                 console.log(`RecordType: ${record.recordType} | Fully Qualified Name: ${record.fqdn} | Value: ${record.values[0]}`)
                 if(record.recordType == 'CNAME') {
-                    state.oktaCustomDomainBackendDomain = record.values[0]
+                    state.oauthCustomDomainBackendDomain = record.values[0]
                 }
             }
             console.log('----------------------------------------------------')
 
-            state.oktaCustomDomainId = domain.id
+            state.oauthCustomDomainId = domain.id
         }
         else {
             console.log('Domain setup failed.')
         }
     },
 
-    handle_okta_verify_custom_domain: async (rl, state) => {
+    handle_oauth_verify_custom_domain: async (rl, state) => {
         console.log('Verifying custom domain in Okta...')
         const client = getClient(state)
 
-        var domain = await client.customDomainApi.verifyDomain({domainId: state.oktaCustomDomainId})
+        var domain = await client.customDomainApi.verifyDomain({domainId: state.oauthCustomDomainId})
 
         while(domain.validationStatus != 'COMPLETED' && domain.validationStatus != 'VERIFIED') {
             console.log('Domain setup not yet complete.  Awaiting DNS record verification.')
@@ -96,7 +111,7 @@ module.exports.handlers = {
             console.log('----------------------------------------------------')
             await utils.askSpecific(rl, 'Domain verification is not yet complete- ensure your DNS records are setup as specified. Press "y" to retry, or ctrl+c to exit and revisit later.', ['y'])
 
-            domain = await client.customDomainApi.verifyDomain({domainId: state.oktaCustomDomainId})
+            domain = await client.customDomainApi.verifyDomain({domainId: state.oauthCustomDomainId})
         }
         console.log('Domain setup complete! Your Okta org should now be available at: https://' + state.baseDomain)
     },
@@ -106,10 +121,10 @@ module.exports.handlers = {
         console.log('These are details you must provide to your FHIR implementation.')
         console.log('These values must be placed in the FHIR server\'s smart-configuration endpoint')
 
-        console.log(`Issuer: https://${state.baseDomain}/oauth2/${state.oktaResourceServerId}`)
-        console.log(`Authorize URL: https://${state.baseDomain}/oauth2/${state.oktaResourceServerId}/v1/authorize`)
-        console.log(`Token URL: https://${state.baseDomain}/oauth2/${state.oktaResourceServerId}/v1/token`)
-        console.log(`Keys URL: https://${state.baseDomain}/oauth2/${state.oktaResourceServerId}/v1/keys`)
+        console.log(`Issuer: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}`)
+        console.log(`Authorize URL: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}/v1/authorize`)
+        console.log(`Token URL: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}/v1/token`)
+        console.log(`Keys URL: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}/v1/keys`)
     }
 }
 
@@ -210,8 +225,8 @@ async function createApps(state, client) {
     if(apiM2MDetails.created) {
         console.log('API Access Client Created. Granting Okta management API scopes.')
         for(const scope of apiScopes) {
-            console.log(`Adding scope: ${scope} to Okta Org: https://${state.oktaDomain}`)
-            await client.applicationApi.grantConsentToScope({appId: apiM2MDetails.id, oAuth2ScopeConsentGrant: {"issuer": `https://${state.oktaDomain}`, "scopeId": scope}})
+            console.log(`Adding scope: ${scope} to Okta Org: https://${state.oauthServiceBaseDomain}`)
+            await client.applicationApi.grantConsentToScope({appId: apiM2MDetails.id, oAuth2ScopeConsentGrant: {"issuer": `https://${state.oauthServiceBaseDomain}`, "scopeId": scope}})
         }
 
         console.log('Scopes granted. Assigning application admin role to the new application.')
@@ -301,9 +316,9 @@ async function createApp(client, appModel) {
 function getClient(state) {
     const keyPem = fs.readFileSync(state.oktaDeployMgmtPrivateKeyFile, 'utf-8')
     return new okta.Client({
-        orgUrl: `https://${state.oktaDomain}`,
+        orgUrl: `https://${state.oauthServiceBaseDomain}`,
         authorizationMode: 'PrivateKey',
-        clientId: state.oktaDeployMgmtClientId,
+        clientId: state.oauthDeployMgmtClientId,
         scopes: ['okta.apps.manage', 'okta.apps.read', 'okta.appGrants.manage', 'okta.appGrants.read', 'okta.authorizationServers.read', 'okta.authorizationServers.manage', 'okta.domains.manage', 'okta.domains.read', 'okta.clients.read', 'okta.clients.manage', 'okta.roles.read', 'okta.roles.manage'],
         privateKey: keyPem
       });

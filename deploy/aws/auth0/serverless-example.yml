@@ -1,6 +1,6 @@
-#This is the config file for the Auth0 reference implementation of UDAP.
+#This is the config file for deploying a reference implementation of a UDAP compatible authorization service.
 
-service: udap-server-auth0
+service: udap-server
 
 plugins:
   - serverless-certificate-creator
@@ -21,7 +21,7 @@ params:
 
     #signing algorithm for jwt
     SIGNING_ALGORITHM: RS256
-
+    OAUTH_RESOURCE_SERVER_ID: yourauthzserverid
     #Allows us to set these paths because the backend authz server can have different token/authorize paths.
     ISSUER_PATH: /
     TOKEN_PATH: /oauth/token
@@ -33,7 +33,7 @@ params:
 
     #The hostname used for vanity URLs on the backend authz server.
     OAUTH_CUSTOM_DOMAIN_NAME_BACKEND: yourauth0tenantsubdomain.customdomains.auth0preview.com
-    OAUTH_CUSTOM_DOMAIN_NAME_APIKEY: forauth0only
+    OAUTH_CUSTOM_DOMAIN_NAME_APIKEY: api_key_from_domain_creation
 
     #OAuth Org settings for calling the management endpoint.
     OAUTH_ORG: yourauth0tenantsubdomain.auth0preview.com
@@ -106,6 +106,8 @@ provider:
 
     OAUTH_PLATFORM: ${param:OAUTH_PLATFORM}
 
+    OAUTH_RESOURCE_SERVER_ID: ${param:OAUTH_RESOURCE_SERVER_ID}
+    
 #Provide additional access to allow read/write to our refresh token cache
   iamRoleStatements:
     - Effect: Allow

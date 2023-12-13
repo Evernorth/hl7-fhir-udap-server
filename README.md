@@ -90,6 +90,11 @@ To make updates to AWS resources, the serverless.yaml file generated during init
 serverless deploy --verbose -c serverless.'deploymentname'.yaml
 ```
 
+## Known Issues
+- This installation of this server automates the retreival of an SSL certificate for the custom domain using [Let's Encrypt](https://letsencrypt.org/).   This SSL certificate is only good for 90 days.
+- The Auth0 implementation is less mature than the Okta and should be treated as experimental at this time. 
+
+
 ## Getting Help
 
 If you have questions, concerns, bug reports, etc., file an issue in this repository's Issue Tracker.

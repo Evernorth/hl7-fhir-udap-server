@@ -4,11 +4,13 @@ const fs = require('fs');
 
 //Non platform specific deploy helpers.
 const utils = require('./deploy_utils')
+const states = require(`./deploy_states`).states
+const initialState = require(`./deploy_states`).initialState
+const finalState = require(`./deploy_states`).finalState
 const STATE_FILE = './work/state'
-const STATE_FINISHED = 'finished'
-const STATE_GENERATE_DEPLOY_CREDENTIALS = 'generate_deployment_credentials'
 
 const SUPPORTED_CLOUD_PLATFORMS = ['aws']
+const SUPPORTED_OAUTH_PLATFORMS = ['okta','auth0']
 
 var state = {}
 
@@ -19,7 +21,7 @@ async function main() {
     var newDeployment = false
     try {
         state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
-        if(state.currentStep == STATE_FINISHED) {
+        if(state.currentStep == finalState) {
             const newDeploy = await utils.askSpecific(rl, 'An existing finished deployment was found. Start a new deployment?', ['y','n'])
             if(newDeploy == 'n') {
                 await handlers['handle_finished'](rl, state)
@@ -43,33 +45,36 @@ async function main() {
         newDeployment = true
     }
 
+    if(newDeployment) {
+        //Init new state based upon our chosen oauth and cloud platform.
+        //We need to ask this stuff first because everything else depends upon it.
+        const chosenCloudPlatform = state.cloudPlatform ? state.cloudPlatform : await utils.askSpecific(rl, 'Which cloud platform would you like to deploy to?', SUPPORTED_CLOUD_PLATFORMS)
+        const chosenOAuthPlatform = state.oauthPlatform ? state.oauthPlatform : await utils.askSpecific(rl, 'Which OAuth platform would you like to deploy to?', SUPPORTED_OAUTH_PLATFORMS)
 
-    //Load all of our resources for the selected cloud platform and selected OAuth platform.
-    const chosenCloudPlatform = state.cloudPlatform ? state.cloudPlatform : await utils.askSpecific(rl, 'Which cloud platform would you like to deploy to?', SUPPORTED_CLOUD_PLATFORMS)
- 
-    //Platform specific deploy helpers.
-    const additionalStates = require(`./${chosenCloudPlatform}/deploy_states`).specificStateVariables
-    const states = require(`./${chosenCloudPlatform}/deploy_states`).states
-    const platformDeployHandlers = require(`./${chosenCloudPlatform}/deploy_handlers`).handlers
+        const globalPlatformStates = require(`./deploy_handlers`).specificStateVariables
+        const additionalPlatformStates = require(`./${chosenCloudPlatform}/deploy_handlers`).specificStateVariables
+        const additionalOauthStates = require(`./${chosenCloudPlatform}/deploy_handlers`).specificStateVariables
 
-    const chosenOAuthPlatform = state.oauthPlatform ? state.oauthPlatform : await utils.askSpecific(rl, 'Which OAuth platform would you like to deploy to?', ['okta','auth0'])
+        state = initState(globalPlatformStates, additionalPlatformStates, additionalOauthStates)
+        state.cloudPlatform = chosenCloudPlatform,
+        state.oauthPlatform = chosenOAuthPlatform,
+        state.currentStep = initialState
+    }
 
-    const oauthDeployHandlers = require(`./${chosenOAuthPlatform}/deploy_handlers`).handlers
+    //We need to load up our chosen handlers every time- even if we're loading an in-flight deployment.
+    const globalDeployHandlers = require(`./deploy_handlers`).handlers
+    const platformDeployHandlers = require(`./${state.cloudPlatform}/deploy_handlers`).handlers
+    const oauthDeployHandlers = require(`./${state.oauthPlatform}/deploy_handlers`).handlers
 
     const handlers = {
+        ...globalDeployHandlers,
         ...oauthDeployHandlers,
         ...platformDeployHandlers
     }
 
-    const deploymentName = state.deploymentName ? state.deploymentName : await utils.askPattern(rl, 'What would you like to name your deployment? This name is appended to all objects in your chosen OAuth platform, and is also appended to all objects in AWS for easy association (Example: SMARTv1)', /.+/)
-
-    if(newDeployment) {
-        state = initState(additionalStates, chosenCloudPlatform, chosenOAuthPlatform, deploymentName)
-    }
-
     console.log('Starting deployment tasks...')
     console.log('Current task: ' + state.currentStep)
-    while(state.currentStep != STATE_FINISHED) {
+    while(state.currentStep != finalState) {
         console.log('Processing deployment task: ' + state.currentStep)
         await handlers[`handle_${state.currentStep}`](rl, state)
 
@@ -82,39 +87,19 @@ async function main() {
             break
         }
     }
-    if(state.currentStep == STATE_FINISHED) {
+    if(state.currentStep == finalState) {
         await handlers['handle_finished'](rl, state)
     }
     rl.close()
     return
 }
-
-function initState(additionalStates, chosenCloudPlatform, chosenOAuthPlatform, deploymentName) {
-    return {
-        cloudPlatform: chosenCloudPlatform,
-        oauthPlatform: chosenOAuthPlatform,
-        currentStep: STATE_GENERATE_DEPLOY_CREDENTIALS,
-        deploymentName: deploymentName,
-        smartVersionScopes: '',
-        baseDomain: '',
-        fhirBaseUrl: '',
-        oauthDomain: '',
-        oauthCustomDomainId: '',
-        auth0CustomDomainApiKey: '',
-        oauthCustomDomainBackendDomain: '',
-        oauthDeployMgmtClientId: '',
-        oauthDeployMgmtPrivateKeyFile: '',
-        oauthApiClientId: '',
-        oauthApiClientPrivateKeyFile: '',
-        oauthResourceServerId: '',
-        udapCommunityCertFile: '',
-        udapMemberP12File: '',
-        udapMemberP12Pwd: '',
-        udapOrganizationName: '',
-        udapOrganizationId: '',
-        udapPurposeOfUse: '',
-        ...additionalStates
+function initState(globalStates, cloudStates, oauthStates) {
+    return  {
+        ...globalStates,
+        ...cloudStates,
+        ...oauthStates
     }
+
 }
 
 function saveState(state) {

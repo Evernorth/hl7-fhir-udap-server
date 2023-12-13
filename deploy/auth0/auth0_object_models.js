@@ -6,6 +6,11 @@ module.exports.apiM2MClient = {
           "credentials": []
         }
     },
+    "jwt_configuration": {
+        "alg": "RS256",
+        "lifetime_in_seconds": 36000,
+        "secret_encoded": false
+    },
     "app_type": "non_interactive",
     "grant_types": [
         "client_credentials"
@@ -26,6 +31,14 @@ module.exports.apiM2MClientGrant = {
         "update:client_credentials",
         "read:clients"
     ]
+}
+
+module.exports.newUdapAppCredential = {
+    "credential_type": "public_key",
+    "name": "",
+    "pem": "",
+    "alg": "RS256",
+    "parse_expiry_from_cert": false
 }
 
 module.exports.authzServer = {

@@ -1,6 +1,6 @@
-#This is the config file for the OAuth reference implementation of UDAP.
+#This is the config file for deploying a reference implementation of a UDAP compatible authorization service.
 
-service: udap-server-OAuth
+service: udap-server
 
 plugins:
   - serverless-certificate-creator
@@ -15,7 +15,7 @@ params:
 
     #Route53 hosted domain (include the period at the end)
     BASE_TLD: domain.tld.
-
+    
     #Base URL of the FHIR server that this implementation is protecting.
     FHIR_BASE_URL: https://your.fhir.server
 
@@ -35,9 +35,8 @@ params:
 
     #The hostname used for vanity URLs on the backend authz server.
     OAUTH_CUSTOM_DOMAIN_NAME_BACKEND: youroktatenantsubdomain.customdomains.oktapreview.com
-    OAUTH_CUSTOM_DOMAIN_NAME_APIKEY: forauth0only
 
-    #Okta Org settings for calling the management endpoint.
+    #OAuth Org settings for calling the management endpoint.
     OAUTH_ORG: youroktatenantsubdomain.oktapreview.com
     OAUTH_CLIENT_ID: client_id_for_okta_m2m_app_for_management_api
     OAUTH_PRIVATE_KEY_FILE: ./private_key_jwks_file_from_app_in_okta
@@ -109,7 +108,7 @@ provider:
     OAUTH_PLATFORM: ${param:OAUTH_PLATFORM}
 
     OAUTH_RESOURCE_SERVER_ID: ${param:OAUTH_RESOURCE_SERVER_ID}
-
+    
 #Provide additional access to allow read/write to our refresh token cache
   iamRoleStatements:
     - Effect: Allow

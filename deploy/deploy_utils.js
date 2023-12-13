@@ -1,6 +1,3 @@
-const readline = require('readline');
-
-
 async function askSpecific(rl, question, arraySpecificAnswers) {
     return new Promise((resolve, reject) => {
         rl.question(`${question}:`, (answer) => {

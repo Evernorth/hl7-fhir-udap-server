@@ -3,27 +3,20 @@ const YAML = require('yaml')
 const fs = require('fs')
 const execSync = require('child_process').execSync;
 
-const SERVERLESS_AWS_EXAMPLE_CONFIG = './aws/serverless-example-{platform}.yml'
+const SERVERLESS_AWS_EXAMPLE_CONFIG = './aws/{platform}/serverless-example.yml'
+
+module.exports.specificStateVariables = {
+    apiGatewayBackendDomain: '',
+    awsRegion: ''    
+}
 
 module.exports.handlers = {
-    handle_deploy_questionnaire: async (rl, state) => {
-        console.log('Collecting initial configuration information...')
-        state.smartVersionScopes = await utils.askSpecific(rl, 'What SMART versions would you like to support? (v1, v2, both)', ['v1','v2','both'])
-        state.awsRegion = await utils.askPattern(rl, 'What AWS region are you deploying in? (Example: us-east-1)', /.+/)
-        state.baseDomain = await utils.askPattern(rl, 'What will the base domain of your authorization service be? (Example: smartauthz.your.tld)', /.+/)
-        state.fhirBaseUrl = await utils.askPattern(rl, 'What is the base URL of the FHIR server you are securing? (Example: https://fhir.your.tld/r4)', /.+/)
-      
-        state.oauthDomain = await utils.askPattern(rl, 'What OAuth tenant will you use to secure this FHIR server? (Example: yourtenant.region.auth0.com)', /.+/)
-        state.oauthDeployMgmtClientId = await utils.askPattern(rl, 'Please enter the client id of the machine to machine application in your tenant for use by the deploy script to create required objects. You created this at the beginning of this process.', /.+/)
-        
-        state.udapCommunityCertFile = await utils.askPattern(rl, 'Please enter the file path of your UDAP community trust anchor here. This will be a CA certificate in PEM format', /.+/)
-        state.udapMemberP12File = await utils.askPattern(rl, 'Please enter the file path of your server\'s community private key/certificate file. This file will identify your server as being part of a community, and must be in PKCS12 format', /.+/)
-        state.udapMemberP12Pwd = await utils.askPattern(rl, 'Please enter the encryption password of your PKCS12 file here', /.+/)
-        state.udapOrganizationName = await utils.askPattern(rl, 'Please enter your organization name. This will be used when registering as a data holder with an upstream IDP', /.+/)
-        state.udapOrganizationId = await utils.askPattern(rl, 'Please enter your organization ID in your community. This will be used when registering as a data holder with an upstream IDP', /.+/)
-        state.udapPurposeOfUse = await utils.askPattern(rl, 'Please enter your purpose of use for your community membership. This will be used when registering as a data holder with an upstream IDP', /.+/)
+    handle_deploy_cloud_questionnaire: async (rl, state) => {
+        console.log('Collecting cloud platform information...')
 
-        console.log('All set! Deploying with the following configuration:')
+        state.awsRegion = await utils.askPattern(rl, 'What AWS region are you deploying in? (Example: us-east-1)', /.+/)
+
+        console.log('All set! Current configuration:')
         console.log(state)
     },
 
@@ -41,13 +34,15 @@ module.exports.handlers = {
         serverlessConfig.params.default.BASE_TLD = `${domainParts[domainParts.length - 2]}.${domainParts[domainParts.length - 1]}.`
         serverlessConfig.params.default.FHIR_BASE_URL = state.fhirBaseUrl
     
-        serverlessConfig.params.default.OAUTH_ORG = state.oauthDomain
+        serverlessConfig.params.default.OAUTH_ORG = state.oauthServiceBaseDomain
         serverlessConfig.params.default.OAUTH_CUSTOM_DOMAIN_NAME_BACKEND = state.oauthCustomDomainBackendDomain
-        serverlessConfig.params.default.OAUTH_CUSTOM_DOMAIN_NAME_APIKEY = state.auth0CustomDomainApiKey
+
+        serverlessConfig.params.default.OAUTH_CUSTOM_DOMAIN_NAME_APIKEY = state.oauthCustomDomainApiKey
+
         serverlessConfig.params.default.API_GATEWAY_DOMAIN_NAME_BACKEND = state.apiGatewayBackendDomain
 
-        serverlessConfig.params.default.OAUTH_CLIENT_ID = state.oauthApiClientId
-        serverlessConfig.params.default.OAUTH_PRIVATE_KEY_FILE = `udap_pki/${state.oauthApiClientPrivateKeyFile}`
+        serverlessConfig.params.default.OAUTH_CLIENT_ID = state.oauthRuntimeAPIClientId
+        serverlessConfig.params.default.OAUTH_PRIVATE_KEY_FILE = `udap_pki/${state.oauthRuntimeAPIPrivateKeyFile}`
 
         serverlessConfig.params.default.COMMUNITY_CERT = state.udapCommunityCertFile
         serverlessConfig.params.default.SERVER_KEY = state.udapMemberP12File
@@ -57,13 +52,13 @@ module.exports.handlers = {
 
         serverlessConfig.params.default.PURPOSE_OF_USE = state.udapPurposeOfUse
 
-        serverlessConfig.params.default.OAUTH_RESOURCE_SERVER_ID = state.oauthResourceServerId
+        serverlessConfig.params.default.OAUTH_RESOURCE_SERVER_ID = state.fhirResourceServerId
 
         console.log(`Writing new config file at: ${serverlessConfigFile}`)
         fs.writeFileSync(serverlessConfigFile, YAML.stringify(serverlessConfig), 'utf-8');
     },
 
-    handle_aws_certs: async (rl, state) => {
+    handle_setup_cloud_platform_certs: async (rl, state) => {
         const usingRoute53 = await utils.askSpecific(rl, 'Are you using route53 to handle DNS for your base domain?', ['y','n'])
         if(usingRoute53 == 'y') {
             console.log('Requesting and deploying TLS certs in AWS...')
@@ -122,7 +117,7 @@ module.exports.handlers = {
         }
     },
 
-    handle_aws_custom_domain: async (rl, state) => {
+    handle_setup_cloud_platform_custom_domain: async (rl, state) => {
         console.log('Setting up custom domain in AWS API Gateway...')
 
         const domainDeployServerlessConfigFile = `./work/serverless.${state.deploymentName}.domain.yml`
@@ -147,7 +142,7 @@ module.exports.handlers = {
         execSync(`serverless create_domain --verbose -c ${domainDeployServerlessConfigFile.replace('./work/','')}`, {cwd: './work', stdio: 'inherit'})
     },
 
-    handle_collect_aws_api_gateway_domain: async (rl, state) => {
+    handle_cloud_deploy_manual_prestep: async (rl, state) => {
         console.log('Manual step to configure the custom domain in AWS API Gateway...')
         console.log('In order to finalize our AWS setup, we need the API gateway internal domain name for the custom domain we just created.')
         console.log('To get this value, visit the following URL:')
@@ -157,15 +152,15 @@ module.exports.handlers = {
         state.apiGatewayBackendDomain = await utils.askPattern(rl, 'API Gateway domain name', /.+/)
     },
 
-    handle_aws_deploy: async (rl, state) => {
+    handle_cloud_deploy: async (rl, state) => {
         console.log('Deploying resources to AWS...')
         console.log('Copying serverless config file to the root of the project...')
         console.log(`Copying ./work/serverless.${state.deploymentName}.yml to ../serverless.${state.deploymentName}.yml`)
         execSync(`cp ./work/serverless.${state.deploymentName}.yml ../serverless.${state.deploymentName}.yml`, {cwd: './', stdio: 'inherit'})
 
         console.log('Copying OAuth API private key to the udap_pki folder...')
-        console.log(`Copying ./work/${state.oauthApiClientPrivateKeyFile} to ../udap_pki/${state.oauthApiClientPrivateKeyFile}`)
-        execSync(`cp ./work/${state.oauthApiClientPrivateKeyFile} ../udap_pki/${state.oauthApiClientPrivateKeyFile}`, {cwd: './', stdio: 'inherit'})
+        console.log(`Copying ./work/${state.oauthRuntimeAPIPrivateKeyFile} to ../udap_pki/${state.oauthRuntimeAPIPrivateKeyFile}`)
+        execSync(`cp ./work/${state.oauthRuntimeAPIPrivateKeyFile} ../udap_pki/${state.oauthRuntimeAPIPrivateKeyFile}`, {cwd: './', stdio: 'inherit'})
 
         await utils.askSpecific(rl, 'Press "y" when you are ready to finish AWS deployment (this will take 10-15 minutes), or ctrl+c to exit and revisit later.', ['y'])
         execSync(`serverless deploy --verbose -c serverless.${state.deploymentName}.yml`, {cwd: '../', stdio: 'inherit'})
