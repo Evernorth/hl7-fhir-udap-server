@@ -1,0 +1,384 @@
+#This is the config file for deploying a reference implementation of a UDAP compatible authorization service.
+
+service: udap-server
+
+plugins:
+  - serverless-certificate-creator
+  - serverless-domain-manager
+
+params:
+  default:
+    AWS_REGION: us-east-1
+
+    #The domain name you want publicly as the base domain name.
+    BASE_DOMAIN: your.domain.tld
+
+    #Route53 hosted domain (include the period at the end)
+    BASE_TLD: domain.tld.
+    
+    #Base URL of the FHIR server that this implementation is protecting.
+    FHIR_BASE_URL: https://your.fhir.server
+
+    #signing algorithm for jwt
+    SIGNING_ALGORITHM: RS256
+    OAUTH_RESOURCE_SERVER_ID: yourauthzserverid
+    #Allows us to set these paths because the backend authz server can have different token/authorize paths.
+    ISSUER_PATH: /
+    TOKEN_PATH: /oauth/token
+    AUTHORIZE_PATH: /authorize
+    METADATA_PATH: /.well-known/udap
+    INTROSPECT_PATH: /introspect
+    REVOKE_PATH: /revoke
+    TIERED_OAUTH_REDIRECT_PATH: /login/callback
+
+    #The hostname used for vanity URLs on the backend authz server.
+    OAUTH_CUSTOM_DOMAIN_NAME_BACKEND: yourauth0tenantsubdomain.customdomains.auth0preview.com
+    OAUTH_CUSTOM_DOMAIN_NAME_APIKEY: api_key_from_domain_creation
+
+    #OAuth Org settings for calling the management endpoint.
+    OAUTH_ORG: yourauth0tenantsubdomain.auth0preview.com
+    OAUTH_CLIENT_ID: client_id_for_auth0_m2m_app_for_management_api
+    OAUTH_PRIVATE_KEY_FILE: ./private_key_jwks_file_from_app_in_auht0
+    OAUTH_CLIENT_TOKEN_ENDPOINT: https://${param:OAUTH_ORG}/oauth/token
+
+    #Certificate to use to determine the trust community.
+    COMMUNITY_CERT: ./EMRDirectTestCA.crt
+    SERVER_KEY: ./server.p12
+    SERVER_KEY_PWD: your_p12_password
+
+    #Details to use for dynamic client registration as a tiered-oauth data holder.
+    ORGANIZATION_NAME: your_org_name_here
+    ORGANIZATION_ID: https://your_org_id_here
+    PURPOSE_OF_USE: urn:oid:2.16.840.1.113883.5.8#TREAT
+
+
+    IDP_MAPPING_TABLE_NAME: udap_tiered_oauth_idp_mapping
+    SAN_REGISTRY_TABLE_NAME: san_client_id_mapping
+
+    #The backend domain name for the api gateway deployment.
+    API_GATEWAY_DOMAIN_NAME_BACKEND: api_gateway_custom_domain_backend_url
+
+    #This should be 'okta' or 'auth0'
+    OAUTH_PLATFORM: auth0
+
+##YOU SHOULD NOT NEED TO TOUCH ANYTHING BELOW THIS LINE
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: sandbox
+  region: ${param:AWS_REGION}
+
+  logs:
+    restApi: true
+
+  environment:
+    BASE_DOMAIN: ${param:BASE_DOMAIN}
+    FHIR_BASE_URL: ${param:FHIR_BASE_URL}
+    SIGNING_ALGORITHM:  ${param:SIGNING_ALGORITHM}
+    ISSUER_PATH: https://${param:BASE_DOMAIN}${param:ISSUER_PATH}
+    TOKEN_ENDPOINT: https://${param:BASE_DOMAIN}${param:TOKEN_PATH}
+    AUTHORIZE_ENDPOINT: https://${param:BASE_DOMAIN}${param:AUTHORIZE_PATH}
+    INTROSPECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:INTROSPECT_PATH}
+    REVOKE_ENDPOINT: https://${param:BASE_DOMAIN}${param:REVOKE_PATH}
+    REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}/register
+    TIERED_OAUTH_REDIRECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:TIERED_OAUTH_REDIRECT_PATH}
+
+    OAUTH_ORG_VANITY_URL_TOKEN_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:TOKEN_PATH}
+    OAUTH_ORG_VANITY_URL_AUTHORIZE_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:AUTHORIZE_PATH}
+    OAUTH_ORG_VANITY_URL_APIKEY: ${param:OAUTH_CUSTOM_DOMAIN_NAME_APIKEY}
+
+    OAUTH_ORG: ${param:OAUTH_ORG}
+    OAUTH_CLIENT_ID: ${param:OAUTH_CLIENT_ID}
+    OAUTH_PRIVATE_KEY_FILE: ${param:OAUTH_PRIVATE_KEY_FILE}
+    OAUTH_CLIENT_TOKEN_ENDPOINT: ${param:OAUTH_CLIENT_TOKEN_ENDPOINT}
+
+    COMMUNITY_CERT: ${param:COMMUNITY_CERT}
+    SERVER_KEY: ${param:SERVER_KEY}
+    SERVER_KEY_PWD: ${param:SERVER_KEY_PWD}
+    SERVER_SAN: https://${param:BASE_DOMAIN}${param:ISSUER_PATH}
+
+    ORGANIZATION_NAME: ${param:ORGANIZATION_NAME}
+    ORGANIZATION_ID: ${param:ORGANIZATION_ID}
+    PURPOSE_OF_USE: ${param:PURPOSE_OF_USE}
+
+    IDP_MAPPING_TABLE_NAME: ${param:BASE_DOMAIN}_${param:IDP_MAPPING_TABLE_NAME}
+    SAN_REGISTRY_TABLE_NAME: ${param:BASE_DOMAIN}_${param:SAN_REGISTRY_TABLE_NAME}
+
+    OAUTH_PLATFORM: ${param:OAUTH_PLATFORM}
+
+    OAUTH_RESOURCE_SERVER_ID: ${param:OAUTH_RESOURCE_SERVER_ID}
+    
+#Provide additional access to allow read/write to our refresh token cache
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource:
+        Fn::GetAtt:
+          - idpMappingTable
+          - Arn
+
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:DeleteItem
+      Resource:
+        Fn::GetAtt:
+          - udapSanRegistry
+          - Arn
+
+#Lambda functions
+functions:
+
+##TOKEN ENDPOINT THAT VALIDATES INBOUND JWTs AGAINST THE TRUST COMMUNITIES
+  token-proxy:
+    handler: ${self:provider.name}/token.tokenHandler
+    events:
+      - http:
+          path: ${param:TOKEN_PATH}
+          method: POST
+          cors: true
+
+##OUTBOUND TOKEN ENDPOINT THAT PERFORMS UDAP SPECIFIC STUFF IN THE FINAL /TOKEN REQUEST.
+  tiered-token-client:
+    handler: ${self:provider.name}/tiered_token_client.tieredTokenClientHandler
+    events:
+      - http:
+          path: /{idpId}/tiered_client/token
+          method: POST
+          cors: true
+
+##Trusted UDAP DCR Proxy
+  tdcr_udap:
+    handler: ${self:provider.name}/tdcr_udap.clientRegistrationHandler
+    events:
+      - http:
+          path: /register
+          method: POST
+
+##AUTHORIZE PROXY THAT PERFORMS TIERED-OAUTH2
+  authorize-proxy:
+    handler: ${self:provider.name}/authorize.authorizeHandler
+    timeout: 20
+    events:
+      - http:
+          path: ${param:AUTHORIZE_PATH}
+          method: GET
+
+  idp_udap_well_known:
+    handler: ${self:provider.name}/udap_well_known.udapConfigHandler
+    events:
+      - http:
+          path: ${param:METADATA_PATH}
+          method: GET
+
+custom:
+  customCertificate:
+    certificateName: ${param:BASE_DOMAIN}
+    hostedZoneNames: ${param:BASE_TLD}
+    subjectAlternativeNames:
+      - ${param:BASE_DOMAIN}
+
+  customDomain:
+    domainName: ${param:BASE_DOMAIN}
+    certificateName: ${param:BASE_DOMAIN}
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: false
+    endpointType: regional
+
+resources:
+  Resources:
+    authzServiceCFDistribution:
+      Type: "AWS::CloudFront::Distribution"
+      Properties:
+        DistributionConfig:
+          Aliases:
+          - ${param:BASE_DOMAIN}
+          Origins:
+          - #THIS ONE IS THE API GATEWAY
+            ConnectionAttempts: 3
+            ConnectionTimeout: 10
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginKeepaliveTimeout: 5
+              OriginProtocolPolicy: "https-only"
+              OriginReadTimeout: 30
+              OriginSSLProtocols:
+              - "TLSv1.2"
+            DomainName: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            Id: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            OriginPath: ""
+          - #THIS ONE IS THE AUTHZ SERVER
+            ConnectionAttempts: 3
+            ConnectionTimeout: 10
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginKeepaliveTimeout: 5
+              OriginProtocolPolicy: "https-only"
+              OriginReadTimeout: 30
+              OriginSSLProtocols:
+              - "TLSv1.2"
+            DomainName: ${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}
+            Id: ${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}
+            OriginCustomHeaders:
+            -
+              HeaderName: "cname-api-key"
+              HeaderValue: ${param:OAUTH_CUSTOM_DOMAIN_NAME_APIKEY}
+            OriginPath: ""
+          DefaultCacheBehavior:
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            CachedMethods:
+            - "HEAD"
+            - "GET"
+            Compress: false
+            DefaultTTL: 86400
+            ForwardedValues:
+              Cookies:
+                Forward: "all"
+              Headers:
+              - "Authorization"
+              - "Origin"
+              - "Accept"
+              - "User-Agent"
+              - "Referer"
+              - "Accept-Language"
+              QueryString: true
+            MaxTTL: 31536000
+            MinTTL: 0
+            SmoothStreaming: false
+            TargetOriginId: ${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "redirect-to-https"
+          CacheBehaviors:
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: ${param:TOKEN_PATH}
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: ${param:AUTHORIZE_PATH}
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: /register
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: /*/tiered_client/token
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: ${param:METADATA_PATH}
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          Comment: ""
+          PriceClass: "PriceClass_All"
+          Enabled: true
+          ViewerCertificate:
+            AcmCertificateArn: ${certificate(${self:custom.customCertificate.certificateName}):CertificateArn}
+            MinimumProtocolVersion: "TLSv1.2_2021"
+            SslSupportMethod: "sni-only"
+          Restrictions:
+            GeoRestriction:
+              RestrictionType: "none"
+          HttpVersion: "http2"
+          DefaultRootObject: ""
+          IPV6Enabled: false
+
+    idpMappingTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.IDP_MAPPING_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: idp_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: idp_id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    udapSanRegistry:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          TableName: ${self:provider.environment.SAN_REGISTRY_TABLE_NAME}
+          AttributeDefinitions:
+            - AttributeName: subject_alternative_name
+              AttributeType: S
+          KeySchema:
+            - AttributeName: subject_alternative_name
+              KeyType: HASH
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1

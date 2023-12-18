@@ -1,0 +1,43 @@
+{
+  "name": "hl7-fhir-udap-server",
+  "version": "1.0.0",
+  "description": "A reference UDAP-capable authorization server built with the ability to plug in different OAuth servers.  Okta and Auth0 included.",
+  "main": "",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Evernorth/hl7-fhir-udap-server.git"
+  },
+  "author": "Evernorth/Okta",
+  "license": "Apache-2.0",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/Evernorth/hl7-fhir-udap-server/issues"
+  },
+  "homepage": "https://github.com/Evernorth/hl7-fhir-udap-server#readme",
+  "dependencies": {
+    "@okta/okta-sdk-nodejs": "^7.0.0",
+    "auth0": "^3.4.0",
+    "axios": "^1.4.0",
+    "njwt": "^2.0.0",
+    "pem-jwk": "^2.0.0",
+    "querystring": "^0.2.1",
+    "hl7-fhir-udap-client": "file:../hl7-fhir-udap-client",
+    "hl7-fhir-udap-common": "file:../hl7-fhir-udap-common"
+  },
+  "devDependencies": {
+    "serverless": "^3.21.0",
+    "serverless-certificate-creator": "^1.6.0",
+    "serverless-domain-manager": "^7.0.4"
+  }
+}
