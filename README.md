@@ -19,7 +19,7 @@ The server side components of the following features of the IG are supported:
 Links to the other repositories in the collection:
 - [hl7-fhir-udap-common](https://github.com/Evernorth/hl7-fhir-udap-common#readme)
 - [hl7-fhir-udap-client](https://github.com/Evernorth/hl7-fhir-udap-client#readme)
-- [hl7-fhir-udap-test-client-ui](https://github.com/Evernorth/hl7-fhir-udap-test-client-ui#readme)
+- [hl7-fhir-udap-client-test-ui](https://github.com/Evernorth/hl7-fhir-udap-client-test-ui#readme)
 
 # Deployment Architecture
 ![Deployment Architecture](./images/DetailedArch.png)
