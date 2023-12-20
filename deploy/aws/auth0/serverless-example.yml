@@ -50,6 +50,7 @@ params:
     ORGANIZATION_NAME: your_org_name_here
     ORGANIZATION_ID: https://your_org_id_here
     PURPOSE_OF_USE: urn:oid:2.16.840.1.113883.5.8#TREAT
+    LOGO_URI: https://your_logo_uri_here
 
 
     IDP_MAPPING_TABLE_NAME: udap_tiered_oauth_idp_mapping
@@ -100,6 +101,7 @@ provider:
     ORGANIZATION_NAME: ${param:ORGANIZATION_NAME}
     ORGANIZATION_ID: ${param:ORGANIZATION_ID}
     PURPOSE_OF_USE: ${param:PURPOSE_OF_USE}
+    LOGO_URI: ${param:LOGO_URI}
 
     IDP_MAPPING_TABLE_NAME: ${param:BASE_DOMAIN}_${param:IDP_MAPPING_TABLE_NAME}
     SAN_REGISTRY_TABLE_NAME: ${param:BASE_DOMAIN}_${param:SAN_REGISTRY_TABLE_NAME}

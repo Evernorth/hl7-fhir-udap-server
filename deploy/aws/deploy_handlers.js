@@ -54,6 +54,8 @@ module.exports.handlers = {
 
         serverlessConfig.params.default.OAUTH_RESOURCE_SERVER_ID = state.fhirResourceServerId
 
+        serverlessConfig.params.default.LOGO_URI = state.logoUri
+
         console.log(`Writing new config file at: ${serverlessConfigFile}`)
         fs.writeFileSync(serverlessConfigFile, YAML.stringify(serverlessConfig), 'utf-8');
     },

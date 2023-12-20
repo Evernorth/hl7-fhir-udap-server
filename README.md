@@ -92,7 +92,8 @@ serverless deploy --verbose -c serverless.'deploymentname'.yaml
 
 ## Known Issues
 - This installation of this server automates the retreival of an SSL certificate for the custom domain using [Let's Encrypt](https://letsencrypt.org/).   This SSL certificate is only good for 90 days.
-- The Auth0 implementation is less mature than the Okta and should be treated as experimental at this time. 
+- The Auth0 implementation is less mature than the Okta and should be treated as experimental at this time.
+- The Tiered OAuth implementation we are adjusting the architecture related to scopes. 
 
 
 ## Getting Help

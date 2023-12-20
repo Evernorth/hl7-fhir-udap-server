@@ -21,7 +21,8 @@ module.exports.specificStateVariables = {
     udapMemberP12Pwd: '',
     udapOrganizationName: '',
     udapOrganizationId: '',
-    udapPurposeOfUse: ''
+    udapPurposeOfUse: '',
+    logoUri: ''
 }
 
 module.exports.handlers = {
@@ -37,6 +38,7 @@ module.exports.handlers = {
         state.udapOrganizationName = await utils.askPattern(rl, 'Please enter your organization name. This will be used when registering as a data holder with an upstream IDP', /.+/)
         state.udapOrganizationId = await utils.askPattern(rl, 'Please enter your organization ID in your community. This will be used when registering as a data holder with an upstream IDP', /.+/)
         state.udapPurposeOfUse = await utils.askPattern(rl, 'Please enter your purpose of use for your community membership. This will be used when registering as a data holder with an upstream IDP (Example: urn:oid:2.16.840.1.113883.5.8#TREAT)', /.+/)
+        state.logoUri = await utils.askPattern(rl, 'Please enter the url of a publiclly accessable logo to represent your server as it registers with an upstream IDP as a client in tiered-oauth. It must refer to a PNG/JPG/GIF image.', /.+/)
 
         console.log('All set! Current configuration:')
         console.log(state)
