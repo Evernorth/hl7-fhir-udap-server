@@ -82,6 +82,7 @@ provider:
     INTROSPECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:INTROSPECT_PATH}
     REVOKE_ENDPOINT: https://${param:BASE_DOMAIN}${param:REVOKE_PATH}
     REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}/register
+    IDP_REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}/idp/register
     TIERED_OAUTH_REDIRECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:TIERED_OAUTH_REDIRECT_PATH}
 
     OAUTH_ORG_VANITY_URL_TOKEN_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:TOKEN_PATH}
@@ -158,6 +159,14 @@ functions:
     events:
       - http:
           path: /register
+          method: POST
+
+##Trusted UDAP DCR Proxy - CSP/IDP Mode
+  tdcr_udap_idp:
+    handler: ${self:provider.name}/tdcr_udap.clientRegistrationHandler
+    events:
+      - http:
+          path: /idp/register
           method: POST
 
 ##AUTHORIZE PROXY THAT PERFORMS TIERED-OAUTH2
@@ -308,6 +317,22 @@ resources:
             CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
             OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
             PathPattern: /register
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: /idp/register
             SmoothStreaming: false
             TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
             ViewerProtocolPolicy: "https-only"

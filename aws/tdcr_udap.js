@@ -12,6 +12,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
     var clientId = null
     var oauthPlatform = null
     
+    var dataHolderOrIdpMode = event.requestContext.path == '/idp/register' ? 'idp' : 'dataholder'
 	if(process.env.OAUTH_PLATFORM == 'okta') {
 		oauthPlatform = require('../lib/okta/udap_okta')
 	}
@@ -20,7 +21,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
 	}
     const oauthPlatformManagementClient = oauthPlatform.getAPIClient(process.env.OAUTH_ORG, process.env.OAUTH_CLIENT_ID, process.env.OAUTH_PRIVATE_KEY_FILE) 
 
-    var validatedRegistrationData = await tdcr_udapLib.validateUdapCommonRegistrationRequest(event.body)
+    var validatedRegistrationData = await tdcr_udapLib.validateUdapCommonRegistrationRequest(event.body, dataHolderOrIdpMode)
 
     if(validatedRegistrationData.verifiedJwt) {
         try {
@@ -30,7 +31,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
             if (result == null) {
                 //new registration
 
-                await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, false)
+                await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, false, dataHolderOrIdpMode)
                 clientId = await oauthPlatform.createClientApp(validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
                 //TODO:  Scope handling needs to happen somewhere in here.
                 await updateSanRegistry(validatedRegistrationData.subjectAlternativeName, clientId)
@@ -39,7 +40,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
             else if(validatedRegistrationData.verifiedJwt.body.grant_types.length > 0) {
                 //update/edit registration
 
-                await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, true)
+                await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, true, dataHolderOrIdpMode)
                 
                 clientId = result.client_application_id
                 //TODO:  Scope handling needs to happen somewhere in here.

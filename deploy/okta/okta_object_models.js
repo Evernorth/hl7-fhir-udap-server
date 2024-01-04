@@ -1,4 +1,4 @@
-module.exports.oktaAPIM2MClientScopes = ['okta.apps.manage','okta.apps.read','okta.idps.read','okta.idps.manage', 'okta.authorizationServers.read', 'okta.authorizationServers.manage']
+module.exports.oktaAPIM2MClientScopes = ['okta.apps.manage','okta.apps.read','okta.idps.read','okta.idps.manage', 'okta.authorizationServers.read', 'okta.authorizationServers.manage', 'okta.profileMappings.read', 'okta.profileMappings.manage']
 
 module.exports.oktaAPIM2MClient = {
     "name": "oidc_client",
