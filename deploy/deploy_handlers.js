@@ -9,6 +9,7 @@ module.exports.specificStateVariables = {
     baseDomain: '',
     fhirBaseUrl: '',
     fhirResourceServerId: '',
+    idpAuthorizationServerId: '',
     oauthDeployMgmtClientId: '',
     oauthRuntimeAPIClientId: '',
     oauthRuntimeAPIPrivateKeyFile: '',

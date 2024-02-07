@@ -12,7 +12,8 @@ module.exports.authorizeHandler = async (event, context) => {
 
 	//TODO: it would be nice to check the key mapping cache early on so we know if this IDP is known yet or not.
 	//Right now we're reaching out to okta every time to see if we know about this IDP yet.
-	const authorizeResult = await authorizeLib.authorizeHandler(event.queryStringParameters, event.headers)
+	const dataHolderOrIdpMode = (event.requestContext.path == process.env.AUTHORIZE_PATH ? 'dataholder' : 'idp')
+	const authorizeResult = await authorizeLib.authorizeHandler(event.queryStringParameters, event.headers, dataHolderOrIdpMode)
 
 	const outputHeaders = createHeaders(authorizeResult.headers)
 

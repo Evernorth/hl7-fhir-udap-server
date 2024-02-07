@@ -47,12 +47,17 @@ module.exports.handlers = {
         serverlessConfig.params.default.COMMUNITY_CERT = state.udapCommunityCertFile
         serverlessConfig.params.default.SERVER_KEY = state.udapMemberP12File
         serverlessConfig.params.default.SERVER_KEY_PWD = state.udapMemberP12Pwd
+
+        serverlessConfig.params.default.IDP_SERVER_KEY = state.udapMemberP12File
+        serverlessConfig.params.default.IDP_SERVER_KEY_PWD = state.udapMemberP12Pwd
+
         serverlessConfig.params.default.ORGANIZATION_NAME = state.udapOrganizationName
         serverlessConfig.params.default.ORGANIZATION_ID = state.udapOrganizationId
 
         serverlessConfig.params.default.PURPOSE_OF_USE = state.udapPurposeOfUse
 
         serverlessConfig.params.default.OAUTH_RESOURCE_SERVER_ID = state.fhirResourceServerId
+        serverlessConfig.params.default.OAUTH_IDP_RESOURCE_SERVER_ID = state.idpAuthorizationServerId
 
         serverlessConfig.params.default.LOGO_URI = state.logoUri
 

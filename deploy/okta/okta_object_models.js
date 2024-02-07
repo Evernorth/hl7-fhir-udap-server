@@ -67,6 +67,13 @@ module.exports.authzServer = {
     "issuerMode": "DYNAMIC"
 }
 
+module.exports.idpAuthzServer = {
+    "name": "UDAP Enabled IDP Service",
+    "description": "Demo IDP to be used as the CSP/IDP in tiered oauth",
+    "audiences": [],
+    "issuerMode": "DYNAMIC"
+}
+
 module.exports.authzScopes = [
     {
         "name": "fhirUser",

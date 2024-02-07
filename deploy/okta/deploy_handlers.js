@@ -47,20 +47,23 @@ module.exports.handlers = {
 
         //Deploy our resource server and applications
         const appDetails = await createApps(state, client)
-        const resourceServerId = await createAuthzServer(state, client)
+        const resourceServerId = await createAuthzServer(state, client, 'dataholder', state.fhirBaseUrl)
+        const idpAuthServerId = await createAuthzServer(state, client, 'idp', 'UDAP Enabled Community')
 
         //Output of detail to go into the platform deployment process.
         console.log('Okta objects created!')
         console.log('--------------------------------------------------------------------------')
-        console.log(`Resource Server ID (FHIR_RESOURCE_SERVER_ID in serverless.yml): ${resourceServerId}`)
+        console.log(`Resource Server ID (OAUTH_RESOURCE_SERVER_ID in serverless.yml): ${resourceServerId}`)
+        console.log(`IDP Authorization Server ID (OAUTH_IDP_RESOURCE_SERVER_ID) in serverless.yml): ${idpAuthServerId}`)
         console.log('--------------------------------------------------------------------------')
         console.log('UDAP M2M App Details:')
         console.log(`UDAP M2M App Client ID (OAUTH_CLIENT_ID in serverless.yml): ${appDetails.apiM2MClientId}`)
         console.log(`UDAP M2M App Client Private Key File (OAUTH_PRIVATE_KEY_FILE in serverless.yml): ${oktaAPIPrivateKeyFile}`)
         console.log('--------------------------------------------------------------------------')
 
-        state.oauthRuntimeAPIClientId = appDetails.apiM2MClientId ? appDetails.apiM2MClientId : state.auth0ApiClientId
-        state.fhirResourceServerId = resourceServerId ? resourceServerId : state.oktaResourceServerId
+        state.oauthRuntimeAPIClientId = appDetails.apiM2MClientId
+        state.fhirResourceServerId = resourceServerId
+        state.idpAuthorizationServerId = idpAuthServerId
 
         if(appDetails.apiM2MClientPrivateKey) {
             //To be consistent, I'm storing the private key as PEM.
@@ -120,21 +123,27 @@ module.exports.handlers = {
         console.log('Your deployment is complete!')
         console.log('These are details you must provide to your FHIR implementation.')
         console.log('These values must be placed in the FHIR server\'s smart-configuration endpoint')
-
         console.log(`Issuer: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}`)
         console.log(`Authorize URL: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}/v1/authorize`)
         console.log(`Token URL: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}/v1/token`)
         console.log(`Keys URL: https://${state.baseDomain}/oauth2/${state.fhirResourceServerId}/v1/keys`)
+
+
+        console.log('These are the details for your tiered oauth CSP/IDP. These details shall be published in your community directory.')
+        console.log(`Issuer: https://${state.baseDomain}/oauth2/${state.idpAuthorizationServerId}`)
+        console.log(`Authorize URL: https://${state.baseDomain}/oauth2/${state.idpAuthorizationServerId}/v1/authorize`)
+        console.log(`Token URL: https://${state.baseDomain}/oauth2/${state.idpAuthorizationServerId}/v1/token`)
+        console.log(`Keys URL: https://${state.baseDomain}/oauth2/${state.idpAuthorizationServerId}/v1/keys`)
     }
 }
 
 //Create Necessary Authz Server
-async function createAuthzServer(state, client) {
-    var authzServerModel = models.authzServer
+async function createAuthzServer(state, client, authzServerRole, audience) {
+    var authzServerModel = (authzServerRole == 'dataholder' ? models.authzServer : models.idpAuthzServer)
 
     authzServerModel.name += '-' + state.deploymentName
 
-    authzServerModel.audiences.push(state.fhirBaseUrl)
+    authzServerModel.audiences.push(audience) //state.fhirBaseUrl)
 
     console.log(`Creating authorization server: ${authzServerModel.name}`)
 
@@ -157,8 +166,8 @@ async function createAuthzServer(state, client) {
     
         const createdAuthzServer = await client.authorizationServerApi.createAuthorizationServer({authorizationServer: authzServerModel})
         console.log('Authorization Server Created.')
-        await addAuthzScopes(state, client, createdAuthzServer.id)
-        await addAuthzClaims(state, client, createdAuthzServer.id)
+        await addAuthzScopes(state, client, createdAuthzServer.id, authzServerRole)
+        await addAuthzClaims(state, client, createdAuthzServer.id, authzServerRole)
         console.log('Finished initial authorization server configuration.')
         return createdAuthzServer.id
     }
@@ -168,7 +177,7 @@ async function createAuthzServer(state, client) {
     }
 }
 
-async function addAuthzScopes(state, client, authzServerId) {
+async function addAuthzScopes(state, client, authzServerId, authzServerRole) {
     //We're not dealing with "existing" items here.  That's handled at the authz server level.  If we're here, it means we definitely need to add scopes.
     console.log('Adding global SMART scopes to the authorization server...')
     const scopes = models.authzScopes
@@ -178,28 +187,30 @@ async function addAuthzScopes(state, client, authzServerId) {
         await client.authorizationServerApi.createOAuth2Scope({authServerId: authzServerId, oAuth2Scope: scope})
     }
     
-    if(state.smartVersionScopes == 'v1' || state.smartVersionScopes == 'both') {
-        console.log('Adding SMART v1 specific scopes to the authorization server...')
-        const scopes = models.smartv1Scopes
-        for(const scope of scopes) {
-            console.log('Adding scope: ' + scope.name)
-            console.log(scope)
-            await client.authorizationServerApi.createOAuth2Scope({authServerId: authzServerId, oAuth2Scope: scope})
+    if(authzServerRole == 'dataholder') {
+        if(state.smartVersionScopes == 'v1' || state.smartVersionScopes == 'both') {
+            console.log('Adding SMART v1 specific scopes to the authorization server...')
+            const scopes = models.smartv1Scopes
+            for(const scope of scopes) {
+                console.log('Adding scope: ' + scope.name)
+                console.log(scope)
+                await client.authorizationServerApi.createOAuth2Scope({authServerId: authzServerId, oAuth2Scope: scope})
+            }
         }
-    }
-    if(state.smartVersionScopes == 'v2' || state.smartVersionScopes == 'both') {
-        console.log('Adding SMART v2 specific scopes to the authorization server...')
-        const scopes = models.smartv2Scopes
-        for(const scope of scopes) {
-            console.log('Adding scope: ' + scope.name)
-            console.log(scope)
-            await client.authorizationServerApi.createOAuth2Scope({authServerId: authzServerId, oAuth2Scope: scope})
+        if(state.smartVersionScopes == 'v2' || state.smartVersionScopes == 'both') {
+            console.log('Adding SMART v2 specific scopes to the authorization server...')
+            const scopes = models.smartv2Scopes
+            for(const scope of scopes) {
+                console.log('Adding scope: ' + scope.name)
+                console.log(scope)
+                await client.authorizationServerApi.createOAuth2Scope({authServerId: authzServerId, oAuth2Scope: scope})
+            }
         }
     }
     console.log('Finished adding scopes.')
 }
 
-async function addAuthzClaims(state, client, authzServerId) {
+async function addAuthzClaims(state, client, authzServerId, authzServerRole) {
     //We're not dealing with "existing" items here.  That's handled at the authz server level.  If we're here, it means we definitely need to add scopes.
     console.log('Adding SMART claims to the authorization server...')
     const claims = models.authzClaims
