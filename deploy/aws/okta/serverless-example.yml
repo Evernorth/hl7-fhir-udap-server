@@ -21,16 +21,29 @@ params:
 
     #signing algorithm for jwt
     SIGNING_ALGORITHM: RS256
+    IDP_SIGNING_ALGORITHM: RS256
 
     OAUTH_RESOURCE_SERVER_ID: yourauthzserverid
+    OAUTH_IDP_RESOURCE_SERVER_ID: youridpauthzserverid
 
     #Allows us to set these paths because the backend authz server can have different token/authorize paths.
+    #These are the paths for the FHIR Resource server audience.
     ISSUER_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}
     TOKEN_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}/v1/token
     AUTHORIZE_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}/v1/authorize
-    METADATA_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}/.well-known/udap
     INTROSPECT_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}/v1/introspect
     REVOKE_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}/v1/revoke
+    REGISTRATION_PATH: /oauth2/${param:OAUTH_RESOURCE_SERVER_ID}/register
+
+    #These are the paths for the IDP Resource server audience.
+    IDP_ISSUER_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}
+    IDP_TOKEN_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}/v1/token
+    IDP_AUTHORIZE_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}/v1/authorize
+    IDP_METADATA_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}/.well-known/udap
+    IDP_INTROSPECT_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}/v1/introspect
+    IDP_REVOKE_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}/v1/revoke
+    IDP_REGISTRATION_PATH: /oauth2/${param:OAUTH_IDP_RESOURCE_SERVER_ID}/register
+
     TIERED_OAUTH_REDIRECT_PATH: /oauth2/v1/authorize/callback
 
     #The hostname used for vanity URLs on the backend authz server.
@@ -46,6 +59,10 @@ params:
     COMMUNITY_CERT: ./EMRDirectTestCA.crt
     SERVER_KEY: ./server.p12
     SERVER_KEY_PWD: your_p12_password
+
+    #enables the ability for the IDP/CSP to have a different keystore than the dataholder authorization server.
+    IDP_SERVER_KEY: ./server.p12
+    IDP_SERVER_KEY_PWD: your_p12_password
 
     #Details to use for dynamic client registration as a tiered-oauth data holder.
     ORGANIZATION_NAME: your_org_name_here
@@ -77,28 +94,45 @@ provider:
     BASE_DOMAIN: ${param:BASE_DOMAIN}
     FHIR_BASE_URL: ${param:FHIR_BASE_URL}
     SIGNING_ALGORITHM:  ${param:SIGNING_ALGORITHM}
+    IDP_SIGNING_ALGORITHM: ${param:IDP_SIGNING_ALGORITHM}
+
     ISSUER_PATH: https://${param:BASE_DOMAIN}${param:ISSUER_PATH}
+    TOKEN_PATH: ${param:TOKEN_PATH}
     TOKEN_ENDPOINT: https://${param:BASE_DOMAIN}${param:TOKEN_PATH}
+    AUTHORIZE_PATH: ${param:AUTHORIZE_PATH}
     AUTHORIZE_ENDPOINT: https://${param:BASE_DOMAIN}${param:AUTHORIZE_PATH}
     INTROSPECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:INTROSPECT_PATH}
     REVOKE_ENDPOINT: https://${param:BASE_DOMAIN}${param:REVOKE_PATH}
-    REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}/register
-    IDP_REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}/idp/register
-    TIERED_OAUTH_REDIRECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:TIERED_OAUTH_REDIRECT_PATH}
+    REGISTRATION_PATH: ${param:REGISTRATION_PATH}
+    REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}${param:REGISTRATION_PATH}
 
-    OAUTH_ORG_VANITY_URL_TOKEN_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:TOKEN_PATH}
-    OAUTH_ORG_VANITY_URL_AUTHORIZE_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:AUTHORIZE_PATH}
-    OAUTH_ORG_VANITY_URL_APIKEY: ${param:OAUTH_CUSTOM_DOMAIN_NAME_APIKEY}
+    IDP_ISSUER_PATH: https://${param:BASE_DOMAIN}${param:IDP_ISSUER_PATH}
+    IDP_TOKEN_ENDPOINT: https://${param:BASE_DOMAIN}${param:IDP_TOKEN_PATH}
+    IDP_AUTHORIZE_ENDPOINT: https://${param:BASE_DOMAIN}${param:IDP_AUTHORIZE_PATH}
+    IDP_INTROSPECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:IDP_INTROSPECT_PATH}
+    IDP_REVOKE_ENDPOINT: https://${param:BASE_DOMAIN}${param:IDP_REVOKE_PATH}
+    IDP_REGISTRATION_ENDPOINT: https://${param:BASE_DOMAIN}${param:IDP_REGISTRATION_PATH}
+
+    TIERED_OAUTH_REDIRECT_ENDPOINT: https://${param:BASE_DOMAIN}${param:TIERED_OAUTH_REDIRECT_PATH}
 
     OAUTH_ORG: ${param:OAUTH_ORG}
     OAUTH_CLIENT_ID: ${param:OAUTH_CLIENT_ID}
     OAUTH_PRIVATE_KEY_FILE: ${param:OAUTH_PRIVATE_KEY_FILE}
     OAUTH_CLIENT_TOKEN_ENDPOINT: ${param:OAUTH_CLIENT_TOKEN_ENDPOINT}
 
+    OAUTH_ORG_VANITY_URL_TOKEN_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:TOKEN_PATH}
+    OAUTH_ORG_VANITY_URL_AUTHORIZE_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:AUTHORIZE_PATH}
+    OAUTH_ORG_VANITY_URL_IDP_TOKEN_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:IDP_TOKEN_PATH}
+    OAUTH_ORG_VANITY_URL_IDP_AUTHORIZE_ENDPOINT: https://${param:OAUTH_CUSTOM_DOMAIN_NAME_BACKEND}${param:IDP_AUTHORIZE_PATH}
+    
     COMMUNITY_CERT: ${param:COMMUNITY_CERT}
     SERVER_KEY: ${param:SERVER_KEY}
     SERVER_KEY_PWD: ${param:SERVER_KEY_PWD}
     SERVER_SAN: https://${param:BASE_DOMAIN}${param:ISSUER_PATH}
+
+    IDP_SERVER_KEY: ${param:IDP_SERVER_KEY}
+    IDP_SERVER_KEY_PWD: ${param:IDP_SERVER_KEY_PWD}
+    IDP_SERVER_SAN: https://${param:BASE_DOMAIN}${param:IDP_ISSUER_PATH}
 
     ORGANIZATION_NAME: ${param:ORGANIZATION_NAME}
     ORGANIZATION_ID: ${param:ORGANIZATION_ID}
@@ -111,6 +145,7 @@ provider:
     OAUTH_PLATFORM: ${param:OAUTH_PLATFORM}
 
     OAUTH_RESOURCE_SERVER_ID: ${param:OAUTH_RESOURCE_SERVER_ID}
+    OAUTH_IDP_RESOURCE_SERVER_ID: ${param:OAUTH_IDP_RESOURCE_SERVER_ID}
     
 #Provide additional access to allow read/write to our refresh token cache
   iamRoleStatements:
@@ -145,6 +180,15 @@ functions:
           method: POST
           cors: true
 
+##TOKEN ENDPOINT THAT SERVES TIERED OAUTH REQUESTS AS AN IDP.
+  idp-token-proxy:
+    handler: ${self:provider.name}/token.tokenHandler
+    events:
+      - http:
+          path: ${param:IDP_TOKEN_PATH}
+          method: POST
+          cors: true
+
 ##OUTBOUND TOKEN ENDPOINT THAT PERFORMS UDAP SPECIFIC STUFF IN THE FINAL /TOKEN REQUEST.
   tiered-token-client:
     handler: ${self:provider.name}/tiered_token_client.tieredTokenClientHandler
@@ -159,14 +203,15 @@ functions:
     handler: ${self:provider.name}/tdcr_udap.clientRegistrationHandler
     events:
       - http:
-          path: /register
+          path: ${param:REGISTRATION_PATH}
           method: POST
+
 ##Trusted UDAP DCR Proxy operating in CSP/IDP Mode.
   tdcr_udap_idp:
     handler: ${self:provider.name}/tdcr_udap.clientRegistrationHandler
     events:
       - http:
-          path: /idp/register
+          path: ${param:IDP_REGISTRATION_PATH}
           method: POST
 
 ##AUTHORIZE PROXY THAT PERFORMS TIERED-OAUTH2
@@ -178,11 +223,19 @@ functions:
           path: ${param:AUTHORIZE_PATH}
           method: GET
 
+  idp-authorize-proxy:
+    handler: ${self:provider.name}/authorize.authorizeHandler
+    timeout: 20
+    events:
+      - http:
+          path: ${param:IDP_AUTHORIZE_PATH}
+          method: GET
+
   idp_udap_well_known:
     handler: ${self:provider.name}/udap_well_known.udapConfigHandler
     events:
       - http:
-          path: ${param:METADATA_PATH}
+          path: ${param:IDP_METADATA_PATH}
           method: GET
 
 custom:
@@ -281,6 +334,22 @@ resources:
             Compress: false
             CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
             OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: ${param:IDP_TOKEN_PATH}
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
             PathPattern: ${param:AUTHORIZE_PATH}
             SmoothStreaming: false
             TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
@@ -297,7 +366,7 @@ resources:
             Compress: false
             CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
             OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
-            PathPattern: /register
+            PathPattern: ${param:IDP_AUTHORIZE_PATH}
             SmoothStreaming: false
             TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
             ViewerProtocolPolicy: "https-only"
@@ -313,7 +382,23 @@ resources:
             Compress: false
             CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
             OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
-            PathPattern: /idp/register
+            PathPattern: ${param:REGISTRATION_PATH}
+            SmoothStreaming: false
+            TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
+            ViewerProtocolPolicy: "https-only"
+          -
+            AllowedMethods:
+            - "HEAD"
+            - "DELETE"
+            - "POST"
+            - "GET"
+            - "OPTIONS"
+            - "PUT"
+            - "PATCH"
+            Compress: false
+            CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+            OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+            PathPattern: ${param:IDP_REGISTRATION_PATH}
             SmoothStreaming: false
             TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
             ViewerProtocolPolicy: "https-only"
@@ -345,7 +430,7 @@ resources:
             Compress: false
             CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
             OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
-            PathPattern: ${param:METADATA_PATH}
+            PathPattern: ${param:IDP_METADATA_PATH}
             SmoothStreaming: false
             TargetOriginId: ${param:API_GATEWAY_DOMAIN_NAME_BACKEND}
             ViewerProtocolPolicy: "https-only"

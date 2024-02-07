@@ -12,7 +12,9 @@ module.exports.clientRegistrationHandler = async (event, context) => {
     var clientId = null
     var oauthPlatform = null
     
-    var dataHolderOrIdpMode = event.requestContext.path == '/idp/register' ? 'idp' : 'dataholder'
+    const dataHolderOrIdpMode = event.requestContext.path == process.env.REGISTRATION_PATH ? 'dataholder' : 'idp'
+    const resourceServerId = (dataHolderOrIdpMode == 'dataholder' ? process.env.OAUTH_RESOURCE_SERVER_ID : process.env.OAUTH_IDP_RESOURCE_SERVER_ID)
+
 	if(process.env.OAUTH_PLATFORM == 'okta') {
 		oauthPlatform = require('../lib/okta/udap_okta')
 	}
@@ -32,7 +34,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
                 //new registration
 
                 await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, false, dataHolderOrIdpMode)
-                clientId = await oauthPlatform.createClientApp(validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
+                clientId = await oauthPlatform.createClientApp(validatedRegistrationData.verifiedJwt, resourceServerId, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
                 //TODO:  Scope handling needs to happen somewhere in here.
                 await updateSanRegistry(validatedRegistrationData.subjectAlternativeName, clientId)
                 returnStatus = '201'
@@ -44,13 +46,13 @@ module.exports.clientRegistrationHandler = async (event, context) => {
                 
                 clientId = result.client_application_id
                 //TODO:  Scope handling needs to happen somewhere in here.
-                await oauthPlatform.updateClientApp(result.client_application_id, validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
+                await oauthPlatform.updateClientApp(result.client_application_id, resourceServerId, validatedRegistrationData.verifiedJwt, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
                 returnStatus = '200'
             }
             else {
                 //No grant types given - delete registration.
                 clientId = result.client_application_id
-                await oauthPlatform.deleteClientApp(result.client_application_id, oauthPlatformManagementClient)
+                await oauthPlatform.deleteClientApp(result.client_application_id, resourceServerId, oauthPlatformManagementClient)
                 await deleteSanRegistry(validatedRegistrationData.subjectAlternativeName)
 
                 returnStatus = '204'
