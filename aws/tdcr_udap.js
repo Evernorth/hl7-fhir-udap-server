@@ -32,7 +32,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
             console.log("Registration request validated.")
             if (result == null) {
                 //new registration
-
+                console.log("Performing application create.")
                 await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, false, dataHolderOrIdpMode)
                 clientId = await oauthPlatform.createClientApp(validatedRegistrationData.verifiedJwt, resourceServerId, validatedRegistrationData.verifiedJwtJwks, oauthPlatformManagementClient)
                 //TODO:  Scope handling needs to happen somewhere in here.
@@ -41,7 +41,7 @@ module.exports.clientRegistrationHandler = async (event, context) => {
             }
             else if(validatedRegistrationData.verifiedJwt.body.grant_types.length > 0) {
                 //update/edit registration
-
+                console.log("Peforming application edit/update.")
                 await tdcr_udapLib.validateClientRegistrationMetaData(validatedRegistrationData.verifiedJwt, true, dataHolderOrIdpMode)
                 
                 clientId = result.client_application_id
@@ -51,11 +51,12 @@ module.exports.clientRegistrationHandler = async (event, context) => {
             }
             else {
                 //No grant types given - delete registration.
+                console.log('Performing application delete.')
                 clientId = result.client_application_id
                 await oauthPlatform.deleteClientApp(result.client_application_id, resourceServerId, oauthPlatformManagementClient)
                 await deleteSanRegistry(validatedRegistrationData.subjectAlternativeName)
 
-                returnStatus = '204'
+                returnStatus = '200'
             }
             
             //TODO: does this merge work if we change scopes?  e.g. do not return what was requested which is what happens today.
